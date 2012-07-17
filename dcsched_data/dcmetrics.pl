@@ -15,7 +15,7 @@ $oh{all}     = '';
 $oh{date}    = '';
 $oh{group}   = '';
 $oh{machine} = '';
-my $command = ' -u ';
+my $command = ' ';
 
 GetOptions(
 	'verbose!'  => \$oh{verbose},
@@ -78,8 +78,7 @@ $command .= $extraArgs;
 
 printf "|%s|\n", $command;
 
-open( DCPIPE, "/sw/sdev/dcsched/dcsched $command |" );
-$i = 1;
+open( DCPIPE, "/sw/sdev/dcsched/dcsched -u $command |" );
 %timeHash = ();
 my $dateRange;
 $extraArgs = trim($extraArgs);
@@ -139,12 +138,60 @@ my @timeData = ([keys %timeHash],[values %timeHash]);
 
 #___CHART
 
-my $chart = Chart::Pie->new (600,600);
+my $chart = Chart::Pie->new (900,900);
 $chart->set('title' => $extraArgs . " usage information from ". $dateRange);
 $chart->add_dataset( keys %timeHash );
 $chart->add_dataset( values %timeHash);
 
-$chart->png('output.png');
+$chart->png('output_usage.png');
 
 #DONE
-print "All done!\n";
+print "Usage Done!\n";
+
+
+
+
+##do it again, except differently.
+open( OTHERPIPE, "/sw/sdev/dcsched/dcsched $command |" );
+$i = 0;
+%timeHash2 = ();
+while (<OTHERPIPE>) {
+	if ( $_ =~ m/until/ ) {
+		$temp = ltrim($_);
+		$temp =~ s/^\*+//;
+		$temp =~ s/until\s+//;
+		$temp = ltrim($temp);
+		
+		my @col = split /\s/, $temp;
+		if ($debug > 1 ) {print $_;}
+		if ( $debug > 0 ) {print $col[0]." ".$col[1]." ".$col[2]." ".$col[3]." ".$col[4]." ".$col[5]." ".$col[6]."\n";}
+		
+		$time1    = str2time( $col[0] . " " . $col[1] . " " . $col[2] );
+		$time2    = str2time( $col[3] . " " . $col[4] . " " . $col[5] );
+		$category = $col[6];
+		
+		$timeHash2{$category} += ($time2 - $time1)/60/60;
+		
+		$output[$i] ="time1: " . $time1 . " time2: " . $time2 . " category: " . $category . "\n";
+		print $output[$i];
+	}
+	$i++;
+}
+
+
+while ( ( $key, $value ) = each(%timeHash2) ) {
+	print $key. ", " . $value . "\n";
+}
+
+close OTHERPIPE;
+
+my @timeDat2 = ([keys %timeHash2],[values %timeHash2]);
+
+my $chart2 = Chart::Pie->new (900,900);
+$chart2->set('title' => $extraArgs . " usage information from ". $dateRange);
+$chart2->add_dataset( keys %timeHash2 );
+$chart2->add_dataset( values %timeHash2);
+
+$chart2->png('output_machine.png');
+
+print "machine Done!";

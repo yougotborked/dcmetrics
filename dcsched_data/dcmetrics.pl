@@ -7,8 +7,7 @@ use Chart::Pie;
 use GD::Graph::pie;
 use List::Util 'max';
 
-
-my $debuG = 1;
+my $debug = 1;
 
 my %oh = ();
 $oh{verbose} = '';
@@ -16,14 +15,12 @@ $oh{all}     = '';
 $oh{date}    = '';
 $oh{group}   = '';
 $oh{machine} = '';
-my $command = '';
+my $command = ' ';
 
 GetOptions(
 	'verbose!'  => \$oh{verbose},
 	'all'       => \$oh{all},
 	'date=s'    => \$oh{date},
-	'group=s'   => \$oh{group},
-	'machine=s' => \$oh{machine}
   );
 
 # Perl trim function to remove whitespace from the start and end of the string
@@ -51,10 +48,6 @@ sub rtrim($) {
 #foreach (keys %oh) {
 # print "$_ = $oh{$_}\n";
 #}
-print "Unprocessed by Getopt::Long\n" if $ARGV[0];
-foreach (@ARGV) {
-	print "$_\n";
-}
 
 if ( $oh{verbose} ) {
 	$v = '-v';
@@ -74,46 +67,44 @@ if ( $oh{date} ) {
 	$command .= ' -' . $date . ' -s ' . '-' . $date . ' ';
 }
 
-if ( $oh{group} ) {
-	$group = $oh{group};
-	print "group set\n";
-	$command .= ' ' . $group . ' ';
+my $extraArgs;
+print "Unprocessed by Getopt::Long\n" if $ARGV[0];
+foreach (@ARGV) {
+	print $_."\n";
+	$extraArgs .= ' '.$_;
 }
 
-if ( $oh{machine} ) {
-	$machine = $oh{machine};
-	print "machine set\n";
-	$command .= ' ' . $machine . ' ';
-}
+$command .= $extraArgs;
 
 printf "|%s|\n", $command;
 
-@output = ();
-open( DCPIPE, "/sw/sdev/dcsched/dcsched $command |" );
-$i = 1;
+open( DCPIPE, "/sw/sdev/dcsched/dcsched -u $command |" );
 %timeHash = ();
-
+my $dateRange;
+$extraArgs = trim($extraArgs);
 while (<DCPIPE>) {
-	if ( $_ =~ m/until/ ) {
-		$temp = ltrim($_);
-		$temp =~ s/^\*+//;
-		$temp =~ s/until\s+//;
-		$temp = ltrim($temp);
-		
-		my @col = split /\s/, $temp;
-		
-		if ( $debuG > 0 ) {print $col[0]." ".$col[1]." ".$col[2]." ".$col[3]." ".$col[4]." ".$col[5]." ".$col[6]."\n";}
-		
-		$time1    = str2time( $col[0] . " " . $col[1] . " " . $col[2] );
-		$time2    = str2time( $col[3] . " " . $col[4] . " " . $col[5] );
-		$category = $col[6];
-		
-		$timeHash{$category} += $time2 - $time1;
-		
-		$output[$i] ="time1: " . $time1 . " time2: " . $time2 . " category: " . $category . "\n";
-		print $output[$i];
+	if (($_ =~ m/Summary system usage report for/)  || ($_ =~ m/System usage report for ($extraArgs)/)) {
+		$dateRange = $_;
+		$dateRange =~ s/^[\w\s]+\(/\(/;
+		while (<DCPIPE>) {
+			if ($_ =~ m/Scheduled time/ || $_ =~ m/Scheduled hours/) {
+				while (<DCPIPE>) {
+					last if $_ =~ m/Total/;
+					if ($_ =~ m/\w\s*\w\s*\w/) {
+						if ($debug > 1) {
+							print $_;
+						}
+						$temp = trim($_);
+						my @col = split /\s+/, $temp;
+						if ( $debug > 0 ) {print $col[0]." ".$col[1]." ".$col[2]."\n";}
+						$category = $col[2];
+						$time = $col[0];
+						$timeHash{$category} += $time
+					}
+				}
+			}
+		}
 	}
-	$i++;
 }
 
 while ( ( $key, $value ) = each(%timeHash) ) {
@@ -124,9 +115,9 @@ close DCPIPE;
 
 my @timeData = ([keys %timeHash],[values %timeHash]);
 
-## CReATE THE CHART !!!!!___
-#GD
-
+### CReATE THE CHART !!!!!___
+##GD
+#
 #open( PNGFILE, ">./graph.png" ) || die "Cannot open graph.png for write: $!\n";
 #binmode PNGFILE;
 #
@@ -134,6 +125,7 @@ my @timeData = ([keys %timeHash],[values %timeHash]);
 #my $mygraph = GD::Graph::pie->new( 300, 300 );
 #$mygraph->set(
 #	title => $oh{machine} . " usage information",
+#
 #	#  '3d'          => 1,
 #  ) or warn $mygraph->error;
 #$mygraph->set_value_font(GD::gdMediumBoldFont);
@@ -144,15 +136,62 @@ my @timeData = ([keys %timeHash],[values %timeHash]);
 #print PNGFILE $myimage->png;
 #close(PNGFILE);
 
-#CHART
+#___CHART
 
-my $chart = Chart::Pie->new (600,600);
-$chart->set('title' => $oh{machine} . " usage information");
+my $chart = Chart::Pie->new (900,900);
+$chart->set('title' => $extraArgs . " usage information from ". $dateRange);
 $chart->add_dataset( keys %timeHash );
 $chart->add_dataset( values %timeHash);
 
-$chart->png('output.png');
-
+$chart->png('output_usage.png');
 
 #DONE
-print "All done!\n";
+print "Usage Done!\n";
+
+
+
+
+##do it again, except differently.
+open( OTHERPIPE, "/sw/sdev/dcsched/dcsched $command |" );
+$i = 0;
+%timeHash2 = ();
+while (<OTHERPIPE>) {
+	if ( $_ =~ m/until/ ) {
+		$temp = ltrim($_);
+		$temp =~ s/^\*+//;
+		$temp =~ s/until\s+//;
+		$temp = ltrim($temp);
+		
+		my @col = split /\s/, $temp;
+		if ($debug > 1 ) {print $_;}
+		if ( $debug > 0 ) {print $col[0]." ".$col[1]." ".$col[2]." ".$col[3]." ".$col[4]." ".$col[5]." ".$col[6]."\n";}
+		
+		$time1    = str2time( $col[0] . " " . $col[1] . " " . $col[2] );
+		$time2    = str2time( $col[3] . " " . $col[4] . " " . $col[5] );
+		$category = $col[6];
+		
+		$timeHash2{$category} += ($time2 - $time1)/60/60;
+		
+		$output[$i] ="time1: " . $time1 . " time2: " . $time2 . " category: " . $category . "\n";
+		print $output[$i];
+	}
+	$i++;
+}
+
+
+while ( ( $key, $value ) = each(%timeHash2) ) {
+	print $key. ", " . $value . "\n";
+}
+
+close OTHERPIPE;
+
+my @timeDat2 = ([keys %timeHash2],[values %timeHash2]);
+
+my $chart2 = Chart::Pie->new (900,900);
+$chart2->set('title' => $extraArgs . " usage information from ". $dateRange);
+$chart2->add_dataset( keys %timeHash2 );
+$chart2->add_dataset( values %timeHash2);
+
+$chart2->png('output_machine.png');
+
+print "machine Done!";

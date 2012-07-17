@@ -88,7 +88,7 @@ while (<DCPIPE>) {
 		$dateRange = $_;
 		$dateRange =~ s/^[\w\s]+\(/\(/;
 		while (<DCPIPE>) {
-			if ($_ =~ m/Scheduled time/ || $_ =~ m/Scheduled hours/) {	
+			if ($_ =~ m/Scheduled time/ || $_ =~ m/Scheduled hours/) {
 				while (<DCPIPE>) {
 					last if $_ =~ m/Total/;
 					if ($_ =~ m/\w\s*\w\s*\w/) {
@@ -101,7 +101,7 @@ while (<DCPIPE>) {
 						$category = $col[2];
 						$time = $col[0];
 						$timeHash{$category} += $time
-					}	
+					}
 				}
 			}
 		}

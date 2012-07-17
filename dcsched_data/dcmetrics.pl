@@ -127,22 +127,22 @@ my @timeData = ([keys %timeHash],[values %timeHash]);
 ## CReATE THE CHART !!!!!___
 #GD
 
-open( PNGFILE, ">./graph.png" ) || die "Cannot open graph.png for write: $!\n";
-binmode PNGFILE;
-
-# Both the arrays should same number of entries.
-my $mygraph = GD::Graph::pie->new( 300, 300 );
-$mygraph->set(
-	title => $oh{machine} . " usage information",
-	#  '3d'          => 1,
-  ) or warn $mygraph->error;
-$mygraph->set_value_font(GD::gdMediumBoldFont);
-
-my $myimage = $mygraph->plot( \@timeData ) or die $mygraph->error;
-
-print "Content-type: image/png\n\n";
-print PNGFILE $myimage->png;
-close(PNGFILE);
+#open( PNGFILE, ">./graph.png" ) || die "Cannot open graph.png for write: $!\n";
+#binmode PNGFILE;
+#
+## Both the arrays should same number of entries.
+#my $mygraph = GD::Graph::pie->new( 300, 300 );
+#$mygraph->set(
+#	title => $oh{machine} . " usage information",
+#	#  '3d'          => 1,
+#  ) or warn $mygraph->error;
+#$mygraph->set_value_font(GD::gdMediumBoldFont);
+#
+#my $myimage = $mygraph->plot( \@timeData ) or die $mygraph->error;
+#
+#print "Content-type: image/png\n\n";
+#print PNGFILE $myimage->png;
+#close(PNGFILE);
 
 #CHART
 

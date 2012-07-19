@@ -148,36 +148,34 @@ $chart->png('output_usage.png');
 #DONE
 print "Usage Done!\n";
 
-
-
-
 ##do it again, except differently.
 open( OTHERPIPE, "/sw/sdev/dcsched/dcsched $command |" );
 $i = 0;
 %timeHash2 = ();
+my $time1;
+my $time2;
+my $category;
 while (<OTHERPIPE>) {
+	if ($debug > 1 ) {print $_;}
 	if ( $_ =~ m/until/ ) {
-		$temp = ltrim($_);
-		$temp =~ s/^\*+//;
-		$temp =~ s/until\s+//;
-		$temp = ltrim($temp);
-		
-		my @col = split /\s/, $temp;
-		if ($debug > 1 ) {print $_;}
-		if ( $debug > 0 ) {print $col[0]." ".$col[1]." ".$col[2]." ".$col[3]." ".$col[4]." ".$col[5]." ".$col[6]."\n";}
-		
-		$time1    = str2time( $col[0] . " " . $col[1] . " " . $col[2] );
-		$time2    = str2time( $col[3] . " " . $col[4] . " " . $col[5] );
-		$category = $col[6];
-		
-		$timeHash2{$category} += ($time2 - $time1)/60/60;
-		
+		if ($debug > 0) {
+			print $_;
+		}
+		while (<OTHERPIPE>) {
+			$temp = trim($_);
+			my @col = split /=/, $temp;
+			if ($col[0] =~ m/StartDate/) {$time1 = str2time($col[1]);}
+			if ($col[0] =~ m/EndDate/) {$time2 = str2time($col[1]);}
+			if ($col[0] =~ m/SkSlotName/) {$category = trim($col[1]);}
+			last if $_ =~ m/until/;
+		}
 		$output[$i] ="time1: " . $time1 . " time2: " . $time2 . " category: " . $category . "\n";
-		print $output[$i];
+		if ($debug > 1) {print $output[$i];}
+		print $time1." ".$time2."\n";
+		$timeHash2{$category} += ($time2 - $time1)/60/60;
+		$i++;
 	}
-	$i++;
 }
-
 
 while ( ( $key, $value ) = each(%timeHash2) ) {
 	print $key. ", " . $value . "\n";

@@ -9,7 +9,7 @@ use Chart::StackedBars;
 use GD::Graph::pie;
 use List::Util 'max';
 
-my $debug = 1;
+my $debug = 0;
 
 my %oh = ();
 $oh{verbose} = '';
@@ -164,7 +164,7 @@ while (<OTHERPIPE>) {
 	if ($debug > 2 ) {print $_;}
 	if ( $_ =~ m/until/ ) {
 		$userToggle = 0;
-		if ($_ =~ m/\)/ ) {$userToggle = 1}
+		if ($_ =~ m/\)$/ ) {$userToggle = 1} #checking if it is a user slot (look for ')' )
 		if ($debug > 1) {
 			print trim($_)."\n";
 		}

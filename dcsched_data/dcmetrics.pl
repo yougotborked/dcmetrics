@@ -212,14 +212,14 @@ $chart2->add_dataset( values %timeHash2);
 $chart2->png('output_machine.png');
 
 my $chart3 = Chart::Pie->new (900,900);
-$chart3->set('title' => $extraArgs . " Os information from " . $dateRange);
+$chart3->set('title' => $extraArgs . " OS information from " . $dateRange);
 $chart3->add_dataset( keys %osHash);
 $chart3->add_dataset( values %osHash);
 
 $chart3->png('output_OS.png');
 
 my $chart4 = Chart::StackedBars->new(900,900);
-$chart4->set('title' => $extraArgs. " Os and Usage Info from " . $dateRange);
+$chart4->set('title' => $extraArgs. " OS and Usage Info from " . $dateRange);
 $chart4->add_dataset (keys %timeHash2);
 $chart4->add_dataset (values %timeHash2);
 $chart4->add_dataset (values %timeHash2);

@@ -20,7 +20,7 @@ $oh{machine} = '';
 my $command = ' ';
 
 GetOptions(
-	'verbose!'  => \$oh{verbose},
+	'verbose' => \$oh{verbose},
 	'all'       => \$oh{all},
 	'date=s'    => \$oh{date},
   );
@@ -51,12 +51,6 @@ sub rtrim($) {
 # print "$_ = $oh{$_}\n";
 #}
 
-if ( $oh{verbose} ) {
-	$v = '-v';
-	print "verbose Set\n";
-	$command .= ' ' . $v . ' ';
-}
-
 if ( $oh{all} ) {
 	$all = '-a';
 	print "all set\n";
@@ -76,7 +70,7 @@ foreach (@ARGV) {
 	$extraArgs .= ' '.$_;
 }
 
-$command .= $extraArgs;
+$command .= "-v" . $extraArgs;
 
 printf "|%s|\n", $command;
 
@@ -88,6 +82,7 @@ while (<DCPIPE>) {
 	if (($_ =~ m/Summary system usage report for/)  || ($_ =~ m/System usage report for ($extraArgs)/)) {
 		$dateRange = $_;
 		$dateRange =~ s/^[\w\s]+\(/\(/;
+		last;
 		while (<DCPIPE>) {
 			if ($_ =~ m/Scheduled time/ || $_ =~ m/Scheduled hours/) {
 				while (<DCPIPE>) {
@@ -140,12 +135,12 @@ my @timeData = ([keys %timeHash],[values %timeHash]);
 
 #___CHART
 
-my $chart = Chart::Pie->new (900,900);
-$chart->set('title' => $extraArgs . " usage information from ". $dateRange);
-$chart->add_dataset( keys %timeHash );
-$chart->add_dataset( values %timeHash);
+#my $chart = Chart::Pie->new (900,900);
+#$chart->set('title' => $extraArgs . " usage information from ". $dateRange);
+#$chart->add_dataset( keys %timeHash );
+#$chart->add_dataset( values %timeHash);
 
-$chart->png('output_usage.png');
+#$chart->png('output_usage.png');
 
 #DONE
 print "Usage Done!\n";
@@ -155,6 +150,7 @@ open( OTHERPIPE, "/sw/sdev/dcsched/dcsched $command |" );
 $i = 0;
 %timeHash2 = ();
 %osHash = ();
+%HoH = ();
 my $time1;
 my $time2;
 my $category;
@@ -188,7 +184,18 @@ while (<OTHERPIPE>) {
 
 		$timeDiff = ($time2-$time1)/60/60;
 		$timeHash2{$category} += $timeDiff;
-		if ($reservedOS) {$osHash{$reservedOS} += $timeDiff;}
+		if ($reservedOS) {
+			$osHash{$reservedOS} += $timeDiff;
+			$HoH{$category}{$reservedOS} += $timeDiff;
+
+			for $cat (keys %HoH ) {
+				$HoH{$cat}{$reservedOS} += 0;
+			}
+			for $op (keys %{values %HoH} ) {
+				$HoH{$category}{$op} += 0;
+			}
+
+		}
 		if ($reservedOS) {$output[$i] ="Time: ".$timeDiff. " category: " . $category . " os: ". $reservedOS. " \n";}
 		else {$output[$i] ="Time: ".$timeDiff. " category: " . $category. " \n";}
 		if ($debug > 0) {print $output[$i];}
@@ -200,6 +207,12 @@ while ( ( $key, $value ) = each(%timeHash2) ) {
 	print $key. ", " . $value . "\n";
 }
 
+while ( ( $key, $value) = each(%HoH) ) {
+	while (($key2, $value2) = each(%{$value})) {
+	print $key. ", " . $key2 .", ". $value2 . "\n";
+	}
+}
+
 close OTHERPIPE;
 
 my @timeDat2 = ([keys %timeHash2],[values %timeHash2]);
@@ -208,21 +221,26 @@ my $chart2 = Chart::Pie->new (900,900);
 $chart2->set('title' => $extraArgs . " usage information from ". $dateRange);
 $chart2->add_dataset( keys %timeHash2 );
 $chart2->add_dataset( values %timeHash2);
-
 $chart2->png('output_machine.png');
 
 my $chart3 = Chart::Pie->new (900,900);
 $chart3->set('title' => $extraArgs . " OS information from " . $dateRange);
 $chart3->add_dataset( keys %osHash);
 $chart3->add_dataset( values %osHash);
-
 $chart3->png('output_OS.png');
 
+my @labels;
 my $chart4 = Chart::StackedBars->new(900,900);
 $chart4->set('title' => $extraArgs. " OS and Usage Info from " . $dateRange);
-$chart4->add_dataset (keys %timeHash2);
-$chart4->add_dataset (values %timeHash2);
-$chart4->add_dataset (values %timeHash2);
+$chart4->add_dataset (keys %osHash);
+for $family (sort keys %HoH ) {
+	push(@labels,$family);
+	print keys %{values %HoH};
+	$chart4->add_dataset ( values %{$HoH{$family}} );
+}
+$chart4->set('y_label' => 'Hours');
+$chart4->set('x_label' => 'OS Type');
+$chart4->set('legend_labels' => \@labels);
 $chart4->png('output_stacked.png');
 
 print "machine Done!";

@@ -1,12 +1,11 @@
-#!/usr/bin/perl
+#!/opt/cpkg/current/perl/current/bin/perl
+
 use warnings;
 use Getopt::Long;
 use Date::Parse;
 use Time::Local;
-use CGI ':standard';
 use Chart::Pie;
 use Chart::StackedBars;
-use GD::Graph::pie;
 use List::Util 'max';
 
 my $debug = 0;
@@ -47,10 +46,6 @@ sub rtrim($) {
 	return $string;
 }
 
-#foreach (keys %oh) {
-# print "$_ = $oh{$_}\n";
-#}
-
 if ( $oh{all} ) {
 	$all = '-a';
 	print "all set\n";
@@ -74,79 +69,8 @@ $command .= "-v" . $extraArgs;
 
 printf "|%s|\n", $command;
 
-open( DCPIPE, "/sw/sdev/dcsched/dcsched -u $command |" );
-%timeHash = ();
-my $dateRange;
-$extraArgs = trim($extraArgs);
-while (<DCPIPE>) {
-	if (($_ =~ m/Summary system usage report for/)  || ($_ =~ m/System usage report for ($extraArgs)/)) {
-		$dateRange = $_;
-		$dateRange =~ s/^[\w\s]+\(/\(/;
-		last;
-		while (<DCPIPE>) {
-			if ($_ =~ m/Scheduled time/ || $_ =~ m/Scheduled hours/) {
-				while (<DCPIPE>) {
-					last if $_ =~ m/Total/;
-					if ($_ =~ m/\w\s*\w\s*\w/) {
-						if ($debug > 1) {
-							print $_;
-						}
-						$temp = trim($_);
-						my @col = split /\s+/, $temp;
-						if ( $debug > 0 ) {print $col[0]." ".$col[1]." ".$col[2]."\n";}
-						$category = $col[2];
-						$time = $col[0];
-						$timeHash{$category} += $time
-					}
-				}
-			}
-		}
-	}
-}
-
-while ( ( $key, $value ) = each(%timeHash) ) {
-	print $key. ", " . $value . "\n";
-}
-
-close DCPIPE;
-
-my @timeData = ([keys %timeHash],[values %timeHash]);
-
-### CReATE THE CHART !!!!!___
-##GD
-#
-#open( PNGFILE, ">./graph.png" ) || die "Cannot open graph.png for write: $!\n";
-#binmode PNGFILE;
-#
-## Both the arrays should same number of entries.
-#my $mygraph = GD::Graph::pie->new( 300, 300 );
-#$mygraph->set(
-#	title => $oh{machine} . " usage information",
-#
-#	#  '3d'          => 1,
-#  ) or warn $mygraph->error;
-#$mygraph->set_value_font(GD::gdMediumBoldFont);
-#
-#my $myimage = $mygraph->plot( \@timeData ) or die $mygraph->error;
-#
-#print "Content-type: image/png\n\n";
-#print PNGFILE $myimage->png;
-#close(PNGFILE);
-
-#___CHART
-
-#my $chart = Chart::Pie->new (900,900);
-#$chart->set('title' => $extraArgs . " usage information from ". $dateRange);
-#$chart->add_dataset( keys %timeHash );
-#$chart->add_dataset( values %timeHash);
-
-#$chart->png('output_usage.png');
-
-#DONE
-print "Usage Done!\n";
-
 ##do it again, except differently.
-open( OTHERPIPE, "/sw/sdev/dcsched/dcsched $command |" );
+open( DCPIPE, "/sw/sdev/dcsched/dcsched $command |" );
 $i = 0;
 %timeHash2 = ();
 %osHash = ();
@@ -156,7 +80,10 @@ my $time2;
 my $category;
 my $reservedOS;
 my $userToggle =0;
-while (<OTHERPIPE>) {
+my $startTime;
+undef $startTime;
+my $endTime;
+while (<DCPIPE>) {
 	if ($debug > 2 ) {print $_;}
 	if ( $_ =~ m/until/ ) {
 		$userToggle = 0;
@@ -168,12 +95,17 @@ while (<OTHERPIPE>) {
 		undef $time2;
 		undef $reservedOS;
 		undef $category;
-		while (<OTHERPIPE>) {
+		while (<DCPIPE>) { ##check for key-value pairs you want to store and store them somewhere.
 			if ($debug > 0) {print $_;}
 			$temp = trim($_);
 			my @col = split /=/, $temp;
-			if ($col[0] =~ m/StartDate/) {$time1 = str2time($col[1]);}
-			if ($col[0] =~ m/EndDate/) {$time2 = str2time($col[1]);}
+			if ($col[0] =~ m/StartDate/) {$time1 = str2time($col[1]);
+				if (!(defined $startTime) ) {$startTime = $col[1];}
+			}
+			
+			if ($col[0] =~ m/EndDate/) {$time2 = str2time($col[1]);
+				$endTime = $col[1];
+			}
 			if ($col[0] =~ m/SkSlotName/) {$category = trim($col[1]);}
 			if ($col[0] =~ m/UrOsVersion/) {$reservedOS = trim($col[1]);}
 			if ($userToggle == 0) {last if $col[0] =~ m/SkSoftwareTypes/; # last item in First half
@@ -181,6 +113,7 @@ while (<OTHERPIPE>) {
 			elsif ($userToggle == 1) {last if $col[0] =~ m/UrSurrender/; #last item in Second Half
 			}
 		}
+		##process your keyvalue pairs before the next machine comes up here
 
 		$timeDiff = ($time2-$time1)/60/60;
 		$timeHash2{$category} += $timeDiff;
@@ -213,9 +146,11 @@ while ( ( $key, $value) = each(%HoH) ) {
 	}
 }
 
-close OTHERPIPE;
+close DCPIPE;
 
-my @timeDat2 = ([keys %timeHash2],[values %timeHash2]);
+$dateRange = $startTime ." - " . $endTime;
+
+##create your charts here. see http://search.cpan.org/~chartgrp/Chart-2.4.5/Chart.pod for chart::type usage
 
 my $chart2 = Chart::Pie->new (900,900);
 $chart2->set('title' => $extraArgs . " usage information from ". $dateRange);

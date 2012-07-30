@@ -46,6 +46,15 @@ sub rtrim($) {
 	return $string;
 }
 
+sub categoryCombine(@) {
+	my($source, $destination, %hash) = @_;
+	$hash{$destination} += $hash{$source};
+	delete($hash{$source});
+	return %hash;
+}
+
+
+
 if ( $oh{all} ) {
 	$all = '-a';
 	print "all set\n";
@@ -72,7 +81,7 @@ printf "|%s|\n", $command;
 ##do it again, except differently.
 open( DCPIPE, "/sw/sdev/dcsched/dcsched $command |" );
 $i = 0;
-%timeHash2 = ();
+%timeHash = ();
 %osHash = ();
 %HoH = ();
 my $time1;
@@ -116,7 +125,7 @@ while (<DCPIPE>) {
 		##process your keyvalue pairs before the next machine comes up here
 
 		$timeDiff = ($time2-$time1)/60/60;
-		$timeHash2{$category} += $timeDiff;
+		$timeHash{$category} += $timeDiff;
 		if ($reservedOS) {
 			$osHash{$reservedOS} += $timeDiff;
 			$HoH{$category}{$reservedOS} += $timeDiff;
@@ -136,7 +145,7 @@ while (<DCPIPE>) {
 	}
 }
 
-while ( ( $key, $value ) = each(%timeHash2) ) {
+while ( ( $key, $value ) = each(%timeHash) ) {
 	print $key. ", " . $value . "\n";
 }
 
@@ -146,6 +155,11 @@ while ( ( $key, $value) = each(%HoH) ) {
 	}
 }
 
+%timeHash = categoryCombine('CLE-4.1 w/PBS', 'CLE-4.1',%timeHash);
+%timeHash = categoryCombine('CLE-4.1 w/Moab', 'CLE-4.1' ,%timeHash);
+
+
+
 close DCPIPE;
 
 $dateRange = $startTime ." - " . $endTime;
@@ -154,8 +168,8 @@ $dateRange = $startTime ." - " . $endTime;
 
 my $chart2 = Chart::Pie->new (900,900);
 $chart2->set('title' => $extraArgs . " usage information from ". $dateRange);
-$chart2->add_dataset( keys %timeHash2 );
-$chart2->add_dataset( values %timeHash2);
+$chart2->add_dataset( keys %timeHash );
+$chart2->add_dataset( values %timeHash);
 $chart2->png('output_machine.png');
 
 my $chart3 = Chart::Pie->new (900,900);

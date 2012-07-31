@@ -283,11 +283,19 @@ $dateRange = $startTime ." - " . $endTime;
 
 ##create your charts here. see http://search.cpan.org/~chartgrp/Chart-2.4.5/Chart.pod for chart::type usage
 
+my @labels;
 my $chart = Chart::Mountain->new(900,900);
 $chart->set('title' => $extraArgs . " daily distribution from" . $dateRange);
-$chart->add_dataset ( keys %timeHash );
-$chart->add_dataset (values %timeHash);
-$chart->add_dataset (values %timeHash);
+$chart->add_dataset (keys %mHash );
+for $family (sort keys %mHash ) {
+	push(@labels,$family);
+	print keys %{values %mHash};
+	$chart4->add_dataset ( values %{$mHash{$family}} );
+}
+$chart4->set('y_label' => 'Total Hours ammong all machines in one Day');
+$chart4->set('x_label' => 'Date');
+$chart4->set('legend_labels' => \@labels);
+
 $chart->png('output_mountain.png');
 
 my $chart2 = Chart::Pie->new (900,900);

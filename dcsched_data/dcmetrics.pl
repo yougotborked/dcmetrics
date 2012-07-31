@@ -10,7 +10,7 @@ use List::Util 'max';
 use Chart::Mountain;
 use Switch 'Perl5', 'Perl6';
 
-my $debug = 1;
+my $debug = 0;
 
 my %oh = ();
 $oh{verbose} = '';
@@ -76,7 +76,7 @@ sub CLEversion
 		case m/preempt/			{return $admin}
 		case m/CLE-4.0/			{return $p40}
 		case m/vers_res_test/ 	{return $notes}
-		case m/ostest/ 			{return $notes}
+		case m/ostest/ 			{return $reserv}
 		case m/petest/			{return $notes}
 		case m/vers/ 			{return $notes}
 		case m/ded/				{return $reserv}

@@ -3,6 +3,7 @@
 use warnings;
 use Getopt::Long;
 use Date::Parse;
+use HTTP::Date;
 use Time::Local;
 use Chart::Pie;
 use Chart::StackedBars;
@@ -17,14 +18,39 @@ $oh{verbose} = '';
 $oh{all}     = '';
 $oh{date}    = '';
 $oh{group}   = '';
-$oh{machine} = '';
 my $command = ' ';
 
 GetOptions(
 	'verbose' => \$oh{verbose},
 	'all'       => \$oh{all},
 	'date=s'    => \$oh{date},
+	'group'	=> \$oh{category},
   );
+
+if ( $oh{all} ) {
+	$all = '-a';
+	print "all set\n";
+	$command .= ' ' . $all . ' ';
+}
+
+if ( $oh{date} ) {
+	$date = $oh{date};
+	print "date set\n";
+	$command .= ' -' . $date . ' -s ' . '-' . $date . ' ';
+}
+
+my $extraArgs;
+print "Unprocessed by Getopt::Long\n" if $ARGV[0];
+foreach (@ARGV) {
+	print $_."\n";
+	$extraArgs .= ' '.$_;
+}
+
+$command .= "-v" . $extraArgs;
+
+printf "|%s|\n", $command;
+
+#end of argument Processing________________
 
 # Perl trim function to remove whitespace from the start and end of the string
 sub trim($) {
@@ -149,30 +175,8 @@ sub categoryCombine(@) {
 	return %hash;
 }
 
-if ( $oh{all} ) {
-	$all = '-a';
-	print "all set\n";
-	$command .= ' ' . $all . ' ';
-}
+#Do the command
 
-if ( $oh{date} ) {
-	$date = $oh{date};
-	print "date set\n";
-	$command .= ' -' . $date . ' -s ' . '-' . $date . ' ';
-}
-
-my $extraArgs;
-print "Unprocessed by Getopt::Long\n" if $ARGV[0];
-foreach (@ARGV) {
-	print $_."\n";
-	$extraArgs .= ' '.$_;
-}
-
-$command .= "-v" . $extraArgs;
-
-printf "|%s|\n", $command;
-
-##do it again, except differently.
 open( DCPIPE, "/sw/sdev/dcsched/dcsched $command |" );
 $i = 0;
 %timeHash = ();
@@ -208,11 +212,11 @@ while (<DCPIPE>) {
 			if ($debug > 0) {print $_;}
 			$temp = trim($_);
 			my @col = split /=/, $temp;
-			if ($col[0] =~ m/StartDate/) {$time1 = str2time($col[1]);
+			if ($col[0] =~ m/StartDate/) {$time1 = Date::Parse::str2time($col[1]);
 				if (!(defined $startTime) ) {$startTime = $col[1];}
 			}
 
-			if ($col[0] =~ m/EndDate/) 		{$time2 = str2time($col[1]);
+			if ($col[0] =~ m/EndDate/) 		{$time2 = Date::Parse::str2time($col[1]);
 				$endTime = $col[1];}
 			if ($col[0] =~ m/SkSlotName/) 	{$category = CLEversion(trim($col[1]));}
 			if ($col[0] =~ m/SkNotes/)		{$notesOS = NotesHandler($col[1]);}
@@ -222,34 +226,46 @@ while (<DCPIPE>) {
 			elsif ($userToggle == 1) {last if $col[0] =~ m/UrSurrender/; #last item in Second Half
 			}
 		}
+		
+
 
 		##process your keyvalue pairs before the next machine comes up here
 
 		$timeDiff = ($time2-$time1)/60/60; #convert to hours
 
+		
+
 
 		if ($devadminOverflow == 1) {
 			$category = 'admin';
 		}
+		
+		
+		($ss2,$mm2,$hh2,$day2,$month2,$year2,$zone2) = strptime(time2str($time2));
+		($ss1,$mm1,$hh1,$day1,$month1,$year1,$zone1) = strptime(time2str($time1));
+
+	
 		switch ($category) {
 			case ('0') {if ($reservedOS) {
 					$timeHash{$reservedOS} += $timeDiff;
+					$mHash{$year1.$month1.$day1}{$reservedOS} += $timeDiff;
 				}
 			}
 			case ('1') {if ($notesOS) {
 					$timeHash{$notesOS} += $timeDiff;
+					$mHash{$year1.$month1.$day1}{$notesOS} += $timeDiff;
 				}
 			}
-			else {$timeHash{$category} += $timeDiff;}
+			else {$timeHash{$category} += $timeDiff;
+				$mHash{$year1.$month1.$day1}{$category} += $timeDiff
+			}
+			
 		}
 
 		if ($reservedOS) {
 			$osHash{$reservedOS} += $timeDiff;
 		}
-		
-		
-		
-		
+
 		if ($reservedOS) {$output[$i] ="Time: ".$timeDiff. " category: " . $category . " os: ". $reservedOS. " \n";}
 		else {$output[$i] ="Time: ".$timeDiff. " category: " . $category. " \n";}
 		if ($debug > 0) {print $output[$i];}

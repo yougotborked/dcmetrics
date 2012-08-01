@@ -74,18 +74,23 @@ sub rtrim($) {
 	return $string;
 }
 
-sub CLEversion
-{
-	my $CLEother = 'CLE other';
-	my $admin = 'admin';
-	my $p22 = '2.2';
-	my $p31 = '3.1';
-	my $p40 = '4.0';
-	my $p41 = '4.1';
-	my $p51 = '5.1';
-	my $reserv = '0';
-	my $notes = '1';
+# the following three functions map various parameters to Release Buckets.
+# Blaine Ebling (bce) is the Final Authority on the correctness of this section.
 
+#Currently it is configured for the DEV group in dcsched.
+
+my $CLEother = 'CLE other';
+my $admin = 'admin';
+my $p22 = '2.2';
+my $p31 = '3.1';
+my $p40 = '4.0';
+my $p41 = '4.1';
+my $p50 = '5.0';
+my $p51 = 'DEVSP2';
+my $reserv = '1'; #if required to look at reservation OS
+my $notes = '2'; #if required to look at Notes field
+my $skip = 'skip'; #if you want to disreguard a field
+sub CLEversion{
 	switch ($_) {
 		case m/devadmins/  		{return $admin}
 		case m/ops/				{return $admin}
@@ -93,6 +98,7 @@ sub CLEversion
 		case m/CLE-4.1/			{return $p41}
 		case m/CLE-Dev/			{return $p41}
 		case m/CLE-shared/ 		{return $p22}
+		case m/CLE-Shared/		{return $p22}
 		case m/upgrade/			{return $admin}
 		case m/admin/			{return $admin}
 		case m/Admin Time/ 		{return $admin}
@@ -109,19 +115,12 @@ sub CLEversion
 		case m/bench-ded/  		{return $reserv}
 		case m/os-ded/			{return $reserv}
 	}
-	print "unhandled category: " . $_ . "\n";
+	print "WARNING: unhandled DCSCHED category:" . $_ ;
+	print "CLE OTHER may now be incorrect\n\n";
 	return $CLEother
 }
 
-sub NotesHandler {
-	my $CLEother = 'CLE other';
-	my $admin = 'admin';
-	my $p22 = '2.2';
-	my $p31 = '3.1';
-	my $p40 = '4.0';
-	my $p41 = '4.1';
-	my $p51 = '5.1';
-
+sub NotesHandler { #Handles Notes Field
 	switch ($_) {
 		case m/devadmins/  		{return $admin}
 		case m/ops/				{return $admin}
@@ -141,19 +140,12 @@ sub NotesHandler {
 		case m/4.1/				{return $p41}
 		case m/4.0/				{return $p40}
 	}
-	print "unhandled Notes: " . $_ . "\n";
+	print "WARNING: unhandled Notes field:" . $_ ;
+	print "CLE OTHER may now be incorrect\n\n";
 	return $CLEother;
 }
 
-sub DedOSversion
-{
-	my $CLEother = 'CLE other';
-	my $p22 = '2.2';
-	my $p31 = '3.1';
-	my $p40 = '4.0';
-	my $p41 = '4.1';
-	my $p51 = '5.1';
-	my $p50 = '5.0';
+sub DedOSversion { #Handles Reservation OS Field
 	switch ($_) {
 		case m/CLE-2.2/			{return $p22}
 		case m/CLE-3.1/			{return $p31}
@@ -164,19 +156,19 @@ sub DedOSversion
 		case m/No OS/			{return $CLEother}
 		case m/CLE-5.0/			{return $p50}
 	}
-	print "unhandled OS: " . $_ . "\n";
+	print "WARNING: unhandled Reserved OS field:" . $_ ;
+	print "CLE OTHER may now be incorrect\n\n";
 	return $CLEother;
 }
 
-sub categoryCombine(@) {
+sub categoryCombine(@) { #Not actually used, but can be useful in the future....
 	my($source, $destination, %hash) = @_;
 	$hash{$destination} += $hash{$source};
 	delete($hash{$source});
 	return %hash;
 }
 
-#Do the command
-
+#Do the command___
 open( DCPIPE, "/sw/sdev/dcsched/dcsched $command |" );
 $i = 0;
 %timeHash = ();
@@ -226,40 +218,55 @@ while (<DCPIPE>) {
 			elsif ($userToggle == 1) {last if $col[0] =~ m/UrSurrender/; #last item in Second Half
 			}
 		}
-		
-
 
 		##process your keyvalue pairs before the next machine comes up here
 
 		$timeDiff = ($time2-$time1)/60/60; #convert to hours
 
-		
-
-
 		if ($devadminOverflow == 1) {
 			$category = 'admin';
 		}
-		
-		
-		($ss2,$mm2,$hh2,$day2,$month2,$year2,$zone2) = strptime(time2str($time2));
-		($ss1,$mm1,$hh1,$day1,$month1,$year1,$zone1) = strptime(time2str($time1));
 
-	
+		($ss1,$mm1,$hh1,$day1,$month1,$year1,$zone1) = strptime(time2str($time1));
+		my $dateValue = $month1."-".$day1;
+
+	 # if a reservation goes past midnight into the next day,
+	 # the data is considered to belong to the start time of the reservation
+	 # this currently only applies to the Mountain Graph, but may also apply to
+	 # different Composition-changing-OverTime graphs.
+	 # see this website for graph suggestions
+	 # http://extremepresentation.typepad.com/files/choosing-a-good-chart-09.pdf
+
 		switch ($category) {
-			case ('0') {if ($reservedOS) {
+			case ('skip') {
+				last;
+			}
+			case ('1') {if ($reservedOS) {
 					$timeHash{$reservedOS} += $timeDiff;
-					$mHash{$year1.$month1.$day1}{$reservedOS} += $timeDiff;
+					$mHash{$reservedOS}{$dateValue} += $timeDiff;
+					for $date (keys %{values %mHash} ) {
+						$mHash{$reservedOS}{$date} += 0;
+					}
 				}
 			}
-			case ('1') {if ($notesOS) {
+			case ('2') {if ($notesOS) {
 					$timeHash{$notesOS} += $timeDiff;
-					$mHash{$year1.$month1.$day1}{$notesOS} += $timeDiff;
+					$mHash{$notesOS}{$dateValue} += $timeDiff;
+					for $date (keys %{values %mHash} ) {
+						$mHash{$notesOS}{$date} += 0;
+					}
 				}
 			}
 			else {$timeHash{$category} += $timeDiff;
-				$mHash{$year1.$month1.$day1}{$category} += $timeDiff
+				$mHash{$category}{$dateValue} += $timeDiff;
+				for $date (keys %{values %mHash} ) {
+					$mHash{$category}{$date} += 0;
+				}
 			}
-			
+		}
+
+		for $op (keys %mHash ) {
+			$mHash{$op}{$dateValue} += 0;
 		}
 
 		if ($reservedOS) {
@@ -283,31 +290,59 @@ $dateRange = $startTime ." - " . $endTime;
 
 ##create your charts here. see http://search.cpan.org/~chartgrp/Chart-2.4.5/Chart.pod for chart::type usage
 
-my @labels;
-my $chart = Chart::Mountain->new(900,900);
+my $chart = Chart::Mountain->new(2000,2000);
 $chart->set('title' => $extraArgs . " daily distribution from" . $dateRange);
-$chart->add_dataset (keys %mHash );
-for $family (sort keys %mHash ) {
-	push(@labels,$family);
-	print keys %{values %mHash};
-	$chart4->add_dataset ( values %{$mHash{$family}} );
-}
-$chart4->set('y_label' => 'Total Hours ammong all machines in one Day');
-$chart4->set('x_label' => 'Date');
-$chart4->set('legend_labels' => \@labels);
+my @tempKeys;
+my @tempVals;
+my @labels;
+$KeysPushed = 0;
+foreach $key (sort (keys(%mHash))) {
+	push (@labels, $key);
+	%tempHash = %{$mHash{$key}};
+	my @tempData;
+	undef @tempData;
 
-$chart->png('output_mountain.png');
+	foreach $date (sort (keys(%tempHash))) { #this sorts the data by date, but then you have to extract it and put it somewhere
+		push (@tempKeys, $date);
+		push (@tempData, $tempHash{$date});
+	}
+	if ($KeysPushed == 0) { #only add the keys (x axis date label) the first time
+		$chart->add_dataset(@tempKeys);
+		if ($debug > 0){print "keys: ". @tempKeys. "\n";}
+		$KeysPushed = 1;
+	}
+	$chart->add_dataset(@tempData);
+	if ($debug > 0 ) {print "data: ". @tempData. "\n";}
+}
+$chart->set('y_label' => 'total hours ammong machineRange in one day');
+$chart->set('x_label' => 'Date');
+$chart->set('legend_labels' => \@labels);
+$chart->png(time.'_output_mountain.png');
 
 my $chart2 = Chart::Pie->new (900,900);
 $chart2->set('title' => $extraArgs . " usage information from ". $dateRange);
-$chart2->add_dataset( keys %timeHash );
-$chart2->add_dataset( values %timeHash);
-$chart2->png('output_machine.png');
+undef @tempKeys;
+undef @tempVals;
+foreach $key (sort (keys(%timeHash))) {
+	push (@tempKeys, $key); {
+		push (@tempVals, $timeHash{$key})
+	}
+}
+$chart2->add_dataset( @tempKeys );
+$chart2->add_dataset( @tempVals );
+$chart2->png(time.'_output_machine.png');
 
 my $chart3 = Chart::Pie->new (900,900);
 $chart3->set('title' => $extraArgs . " OS information from " . $dateRange);
-$chart3->add_dataset( keys %osHash);
-$chart3->add_dataset( values %osHash);
-$chart3->png('output_OS.png');
+undef @tempKeys;
+undef @tempVals;
+foreach $key (sort (keys(%osHash))) {
+	push (@tempKeys, $key); {
+		push (@tempVals, $osHash{$key})
+	}
+}
+$chart3->add_dataset( @tempKeys );
+$chart3->add_dataset( @tempVals );
+$chart3->png(time.'_output_OS.png');
 
 print "machine Done!";

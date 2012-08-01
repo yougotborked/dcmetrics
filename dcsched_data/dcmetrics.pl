@@ -324,9 +324,8 @@ $chart2->set('title' => $extraArgs . " usage information from ". $dateRange);
 undef @tempKeys;
 undef @tempVals;
 foreach $key (sort (keys(%timeHash))) {
-	push (@tempKeys, $key); {
-		push (@tempVals, $timeHash{$key})
-	}
+	push (@tempKeys, $key);
+	push (@tempVals, $timeHash{$key});
 }
 $chart2->add_dataset( @tempKeys );
 $chart2->add_dataset( @tempVals );
@@ -337,9 +336,9 @@ $chart3->set('title' => $extraArgs . " OS information from " . $dateRange);
 undef @tempKeys;
 undef @tempVals;
 foreach $key (sort (keys(%osHash))) {
-	push (@tempKeys, $key); {
-		push (@tempVals, $osHash{$key})
-	}
+	push (@tempKeys, $key);
+	push (@tempVals, $osHash{$key});
+
 }
 $chart3->add_dataset( @tempKeys );
 $chart3->add_dataset( @tempVals );

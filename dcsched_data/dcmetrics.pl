@@ -79,14 +79,14 @@ sub rtrim($) {
 
 #Currently it is configured for the DEV group in dcsched.
 
-my $CLEother = 'CLE other';
+my $CLEother = 'CLE-Other';
 my $admin = 'admin';
 my $p22 = '2.2';
 my $p31 = '3.1';
 my $p40 = '4.0';
 my $p41 = '4.1';
 my $p50 = '5.0';
-my $p51 = 'DEVSP2';
+my $p51 = 'CLE-DEVSP2';
 my $reserv = '1'; #if required to look at reservation OS
 my $notes = '2'; #if required to look at Notes field
 my $skip = 'skip'; #if you want to disreguard a field
@@ -116,7 +116,7 @@ sub CLEversion{
 		case m/os-ded/			{return $reserv}
 	}
 	print "WARNING: unhandled DCSCHED category:" . $_ ;
-	print "CLE OTHER may now be incorrect\n\n";
+	print "CLE-Other may now be incorrect\n\n";
 	return $CLEother
 }
 
@@ -141,7 +141,7 @@ sub NotesHandler { #Handles Notes Field
 		case m/4.0/				{return $p40}
 	}
 	print "WARNING: unhandled Notes field:" . $_ ;
-	print "CLE OTHER may now be incorrect\n\n";
+	print "CLE-Other may now be incorrect\n\n";
 	return $CLEother;
 }
 
@@ -157,7 +157,7 @@ sub DedOSversion { #Handles Reservation OS Field
 		case m/CLE-5.0/			{return $p50}
 	}
 	print "WARNING: unhandled Reserved OS field:" . $_ ;
-	print "CLE OTHER may now be incorrect\n\n";
+	print "CLE-Other may now be incorrect\n\n";
 	return $CLEother;
 }
 
@@ -290,8 +290,10 @@ $dateRange = $startTime ." - " . $endTime;
 
 ##create your charts here. see http://search.cpan.org/~chartgrp/Chart-2.4.5/Chart.pod for chart::type usage
 
-my $chart = Chart::Mountain->new(2000,2000);
-$chart->set('title' => $extraArgs . " daily distribution from" . $dateRange);
+
+print "\nCreating " .$extraArgs . " daily distripbution from " . $dateRange ." Chart \n";
+my $chart = Chart::Mountain->new(1300,1200);
+$chart->set('title' => $extraArgs . " daily distribution from " . $dateRange);
 my @tempKeys;
 my @tempVals;
 my @labels;
@@ -319,11 +321,14 @@ $chart->set('x_label' => 'Date');
 $chart->set('legend_labels' => \@labels);
 $chart->png(time.'_output_mountain.png');
 
+
+
+print "\nCreating " .$extraArgs . " usage information from " . $dateRange ." Chart \n";
 my $chart2 = Chart::Pie->new (900,900);
 $chart2->set('title' => $extraArgs . " usage information from ". $dateRange);
 undef @tempKeys;
 undef @tempVals;
-foreach $key (sort (keys(%timeHash))) {
+foreach $key (sort (keys(%timeHash))) {##so they are in Release Order 
 	push (@tempKeys, $key);
 	push (@tempVals, $timeHash{$key});
 }
@@ -331,6 +336,9 @@ $chart2->add_dataset( @tempKeys );
 $chart2->add_dataset( @tempVals );
 $chart2->png(time.'_output_machine.png');
 
+
+
+print "\nCreating " .$extraArgs . " OS information from " . $dateRange ." Chart \n";
 my $chart3 = Chart::Pie->new (900,900);
 $chart3->set('title' => $extraArgs . " OS information from " . $dateRange);
 undef @tempKeys;
@@ -344,4 +352,4 @@ $chart3->add_dataset( @tempKeys );
 $chart3->add_dataset( @tempVals );
 $chart3->png(time.'_output_OS.png');
 
-print "machine Done!";
+print "Graphs Done!";

@@ -11,7 +11,7 @@ use List::Util 'max';
 use Chart::Mountain;
 use Switch 'Perl5', 'Perl6';
 
-my $debug = 0;
+my $debug = 0; #currently 0,1 or 2
 
 my %oh = ();
 $oh{verbose} = '';
@@ -291,25 +291,28 @@ $dateRange = $startTime ." - " . $endTime;
 ##create your charts here. see http://search.cpan.org/~chartgrp/Chart-2.4.5/Chart.pod for chart::type usage
 #colors
 %colorHash = ('background' => [255,255,255],
-			  'title' 	 => [0,0,0],
-			  'text' 	 => [0,0,0],
-			  'x_label'  => [0,0,0],
-			  'y_label'  => [0,0,0],
-			  'misc'	 => [0,0,0],	
-			  'dataset0' => [0,63,135], 	#cray blue
-			  'dataset1' => [195,200,200], #gray
-			  'dataset2' => [0,173,208], 	#teal
-			  'dataset3' =>	[253,200,47], 	#yellow
-			  'dataset4' => [255,102,0], 	#orange
-			  'dataset5' => [216,30,5], 	#red
-			  'dataset6' => [105,146,58],);	#green 
- 		  
+	'title'		=> [0,0,0],
+	'text'		=> [0,0,0],
+	'x_label'	=> [0,0,0],
+	'y_label'	=> [0,0,0],
+	'misc'		=> [0,0,0],
+	'dataset0'	=> [0,63,135], 	#cray blue
+	'dataset1'	=> [195,200,200], #gray
+	'dataset2'	=> [0,173,208], 	#teal
+	'dataset3'	=> [253,200,47], 	#yellow
+	'dataset4'	=> [255,102,0], 	#orange
+	'dataset5'	=> [216,30,5], 	#red
+	'dataset6'	=> [105,146,58],);	#green
+
 #CHART PARAMATER HASH
 %paramHash = ('graph_border' => '10',
-			  'colors' => \%colorHash,
-			  'grey_background' => 'false');
+	'colors'	 => \%colorHash,
+	'grey_background' => 'false');
 
 ###end paramater setting
+
+####Mountain Distribution Chart
+
 print "\nCreating " .$extraArgs . " daily distripbution from " . $dateRange ." Chart \n";
 my $chart = Chart::Mountain->new(1300,1200);
 $chart->set('title' => $extraArgs . " daily distribution from " . $dateRange);
@@ -341,7 +344,7 @@ $chart->set('x_label' => 'Date');
 $chart->set('legend_labels' => \@labels);
 $chart->png(time.'_output_mountain.png');
 
-
+####Usage Pie chart
 
 print "\nCreating " .$extraArgs . " usage information from " . $dateRange ." Chart \n";
 my $chart2 = Chart::Pie->new (900,900);
@@ -349,7 +352,7 @@ $chart2->set('title' => $extraArgs . " usage information from ". $dateRange);
 $chart2->set(%paramHash);
 undef @tempKeys;
 undef @tempVals;
-foreach $key (sort (keys(%timeHash))) {##so they are in Release Order 
+foreach $key (sort (keys(%timeHash))) {##so they are in Release Order
 	push (@tempKeys, $key);
 	push (@tempVals, $timeHash{$key});
 }
@@ -357,7 +360,7 @@ $chart2->add_dataset( @tempKeys );
 $chart2->add_dataset( @tempVals );
 $chart2->png(time.'_output_machine.png');
 
-
+####OS Pie chart
 
 print "\nCreating " .$extraArgs . " OS information from " . $dateRange ." Chart \n";
 my $chart3 = Chart::Pie->new (900,900);
@@ -368,7 +371,6 @@ undef @tempVals;
 foreach $key (sort (keys(%osHash))) {
 	push (@tempKeys, $key);
 	push (@tempVals, $osHash{$key});
-
 }
 $chart3->add_dataset( @tempKeys );
 $chart3->add_dataset( @tempVals );

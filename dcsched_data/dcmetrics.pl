@@ -289,11 +289,31 @@ close DCPIPE;
 $dateRange = $startTime ." - " . $endTime;
 
 ##create your charts here. see http://search.cpan.org/~chartgrp/Chart-2.4.5/Chart.pod for chart::type usage
+#colors
+%colorHash = ('background' => [255,255,255],
+			  'title' 	 => [0,0,0],
+			  'text' 	 => [0,0,0],
+			  'x_label'  => [0,0,0],
+			  'y_label'  => [0,0,0],
+			  'misc'	 => [0,0,0],	
+			  'dataset0' => [0,63,135], 	#cray blue
+			  'dataset1' => [195,200,200], #gray
+			  'dataset2' => [0,173,208], 	#teal
+			  'dataset3' =>	[253,200,47], 	#yellow
+			  'dataset4' => [255,102,0], 	#orange
+			  'dataset5' => [216,30,5], 	#red
+			  'dataset6' => [105,146,58],);	#green 
+ 		  
+#CHART PARAMATER HASH
+%paramHash = ('graph_border' => '10',
+			  'colors' => \%colorHash,
+			  'grey_background' => 'false');
 
-
+###end paramater setting
 print "\nCreating " .$extraArgs . " daily distripbution from " . $dateRange ." Chart \n";
 my $chart = Chart::Mountain->new(1300,1200);
 $chart->set('title' => $extraArgs . " daily distribution from " . $dateRange);
+$chart->set(%paramHash);
 my @tempKeys;
 my @tempVals;
 my @labels;
@@ -326,6 +346,7 @@ $chart->png(time.'_output_mountain.png');
 print "\nCreating " .$extraArgs . " usage information from " . $dateRange ." Chart \n";
 my $chart2 = Chart::Pie->new (900,900);
 $chart2->set('title' => $extraArgs . " usage information from ". $dateRange);
+$chart2->set(%paramHash);
 undef @tempKeys;
 undef @tempVals;
 foreach $key (sort (keys(%timeHash))) {##so they are in Release Order 
@@ -341,6 +362,7 @@ $chart2->png(time.'_output_machine.png');
 print "\nCreating " .$extraArgs . " OS information from " . $dateRange ." Chart \n";
 my $chart3 = Chart::Pie->new (900,900);
 $chart3->set('title' => $extraArgs . " OS information from " . $dateRange);
+$chart3->set(%paramHash);
 undef @tempKeys;
 undef @tempVals;
 foreach $key (sort (keys(%osHash))) {

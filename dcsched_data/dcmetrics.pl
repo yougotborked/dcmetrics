@@ -94,23 +94,23 @@ sub CLEversion{
 	switch ($_) {
 		case m/devadmins/  		{return $admin}
 		case m/ops/				{return $admin}
-		case m/CLE-3.1/			{return $p31}
-		case m/CLE-4.1/			{return $p41}
-		case m/CLE-Dev/			{return $p41}
-		case m/CLE-shared/ 		{return $p22}
-		case m/CLE-Shared/		{return $p22}
 		case m/upgrade/			{return $admin}
 		case m/admin/			{return $admin}
 		case m/Admin Time/ 		{return $admin}
-		case m/lustre-test/ 	{return $p51}
-		case m/CLE-4.1 w\/LSF/	{return $p41}
-		case m/CLE-DevSP2/ 		{return $p51}
 		case m/preempt/			{return $admin}
+		case m/CLE-shared/ 		{return $p22}
+		case m/CLE-Shared/		{return $p22}
+		case m/CLE-3.1/			{return $p31}
 		case m/CLE-4.0/			{return $p40}
+		case m/CLE-4.1/			{return $p41}
+		case m/CLE-Dev/			{return $p41}
+		case m/CLE-4.1 w\/LSF/	{return $p41}
+		case m/lustre-test/ 	{return $p51}
+		case m/CLE-DevSP2/ 		{return $p51}
 		case m/vers_res_test/ 	{return $notes}
-		case m/ostest/ 			{return $reserv}
 		case m/petest/			{return $notes}
 		case m/vers/ 			{return $notes}
+		case m/ostest/ 			{return $reserv}
 		case m/ded/				{return $reserv}
 		case m/bench-ded/  		{return $reserv}
 		case m/os-ded/			{return $reserv}
@@ -124,21 +124,21 @@ sub NotesHandler { #Handles Notes Field
 	switch ($_) {
 		case m/devadmins/  		{return $admin}
 		case m/ops/				{return $admin}
-		case m/CLE-3.1/			{return $p31}
-		case m/CLE-4.1/			{return $p41}
-		case m/CLE-Dev/			{return $p41}
-		case m/CLE-shared/ 		{return $p22}
 		case m/upgrade/			{return $admin}
 		case m/admin/			{return $admin}
 		case m/Admin Time/ 		{return $admin}
-		case m/lustre-test/ 	{return $p51}
-		case m/CLE-4.1 w\/LSF/	{return $p41}
-		case m/CLE-DevSP2/ 		{return $p51}
 		case m/preempt/			{return $admin}
+		case m/CLE-shared/ 		{return $p22}
+		case m/CLE-3.1/			{return $p31}
 		case m/CLE-4.0/			{return $p40}
+		case m/4.0/				{return $p40}
+		case m/CLE-4.1 w\/LSF/	{return $p41}
+		case m/CLE-4.1/			{return $p41}
+		case m/CLE-Dev/			{return $p41}
 		case m/CLE-DEV/ 		{return $p41}
 		case m/4.1/				{return $p41}
-		case m/4.0/				{return $p40}
+		case m/CLE-DevSP2/ 		{return $p51}
+		case m/lustre-test/ 	{return $p51}
 	}
 	print "WARNING: unhandled Notes field:" . $_ ;
 	print "CLE-Other may now be incorrect\n\n";
@@ -182,10 +182,17 @@ my $notesOS;
 my $userToggle = 0;
 my $devadminOverflow = 0;
 my $startTime;
+my @machineArray =();
 undef $startTime;
 my $endTime;
 while (<DCPIPE>) {
 	if ($debug > 2 ) {print $_;}
+	if ( $_ =~ m/20??\sCDT$/) {
+		$copy = $_ ;
+		$copy =~  s/\s+.*//; 
+		$copy = trim($copy);
+		push(@machineArray,$copy);
+	}
 	if ( $_ =~ m/until/ ) {
 		$userToggle = 0;
 		$devadminOverflow = 0;
@@ -207,7 +214,6 @@ while (<DCPIPE>) {
 			if ($col[0] =~ m/StartDate/) {$time1 = Date::Parse::str2time($col[1]);
 				if (!(defined $startTime) ) {$startTime = $col[1];}
 			}
-
 			if ($col[0] =~ m/EndDate/) 		{$time2 = Date::Parse::str2time($col[1]);
 				$endTime = $col[1];}
 			if ($col[0] =~ m/SkSlotName/) 	{$category = CLEversion(trim($col[1]));}
@@ -286,6 +292,18 @@ while ( ( $key, $value ) = each(%timeHash) ) {
 
 close DCPIPE;
 
+my $machList = '';
+$i = 0;
+foreach $mach (@machineArray) {
+	$i++;
+	$machList .= $mach;
+	if (length $machList > 2) {
+		$machList .= ',';
+	}
+	if ($i % 7 == 0) {
+		$machList .= '\n';		
+	}
+}
 $dateRange = $startTime ." - " . $endTime;
 
 ##create your charts here. see http://search.cpan.org/~chartgrp/Chart-2.4.5/Chart.pod for chart::type usage
@@ -296,26 +314,34 @@ $dateRange = $startTime ." - " . $endTime;
 	'x_label'	=> [0,0,0],
 	'y_label'	=> [0,0,0],
 	'misc'		=> [0,0,0],
-	'dataset0'	=> [0,63,135], 	#cray blue
-	'dataset1'	=> [195,200,200], #gray
+	'dataset0'	=> [0,63,135], 		#cray blue
+	'dataset1'	=> [195,200,200], 	#gray
 	'dataset2'	=> [0,173,208], 	#teal
 	'dataset3'	=> [253,200,47], 	#yellow
 	'dataset4'	=> [255,102,0], 	#orange
-	'dataset5'	=> [216,30,5], 	#red
+	'dataset5'	=> [216,30,5], 		#red
 	'dataset6'	=> [105,146,58],);	#green
 
 #CHART PARAMATER HASH
-%paramHash = ('graph_border' => '10',
-	'colors'	 => \%colorHash,
-	'grey_background' => 'false');
+my $font = 'GD::Font->Giant';
+
+%paramHash = (
+	'graph_border' 		=> '10',
+	'title_font'		=> GD::Font->Giant,
+	'x_label'			=> $dateRange,
+	'colors'	 		=> \%colorHash,
+	'grey_background' 	=> 'false',
+	);
 
 ###end paramater setting
+
+
 
 ####Mountain Distribution Chart
 
 print "\nCreating " .$extraArgs . " daily distripbution from " . $dateRange ." Chart \n";
 my $chart = Chart::Mountain->new(1300,1200);
-$chart->set('title' => $extraArgs . " daily distribution from " . $dateRange);
+$chart->set('title' => $extraArgs . ' daily distribution\n\n' . $machList);
 $chart->set(%paramHash);
 my @tempKeys;
 my @tempVals;
@@ -339,16 +365,16 @@ foreach $key (sort (keys(%mHash))) {
 	$chart->add_dataset(@tempData);
 	if ($debug > 0 ) {print "data: ". @tempData. "\n";}
 }
-$chart->set('y_label' => 'total hours ammong machineRange in one day');
+$chart->set('y_label' => 'total hours ammong machineGroup in one day');
 $chart->set('x_label' => 'Date');
 $chart->set('legend_labels' => \@labels);
-$chart->png(time.'_output_mountain.png');
+$chart->png(time.'_'.$oh{date}.'-day'.'_mountain.png');
 
 ####Usage Pie chart
 
 print "\nCreating " .$extraArgs . " usage information from " . $dateRange ." Chart \n";
-my $chart2 = Chart::Pie->new (900,900);
-$chart2->set('title' => $extraArgs . " usage information from ". $dateRange);
+my $chart2 = Chart::Pie->new (800,800);
+$chart2->set('title' => $extraArgs . ' usage information\n\n' . $machList);
 $chart2->set(%paramHash);
 undef @tempKeys;
 undef @tempVals;
@@ -358,13 +384,13 @@ foreach $key (sort (keys(%timeHash))) {##so they are in Release Order
 }
 $chart2->add_dataset( @tempKeys );
 $chart2->add_dataset( @tempVals );
-$chart2->png(time.'_output_machine.png');
+$chart2->png(time.'_'.$oh{date}.'-day'.'_machine.png');
 
 ####OS Pie chart
 
 print "\nCreating " .$extraArgs . " OS information from " . $dateRange ." Chart \n";
-my $chart3 = Chart::Pie->new (900,900);
-$chart3->set('title' => $extraArgs . " OS information from " . $dateRange);
+my $chart3 = Chart::Pie->new (800,800);
+$chart3->set('title' => $extraArgs . ' OS information\n\n' . $machList);
 $chart3->set(%paramHash);
 undef @tempKeys;
 undef @tempVals;
@@ -374,6 +400,79 @@ foreach $key (sort (keys(%osHash))) {
 }
 $chart3->add_dataset( @tempKeys );
 $chart3->add_dataset( @tempVals );
-$chart3->png(time.'_output_OS.png');
+$chart3->png(time.'_'.$oh{date}.'-day'.'_OS.png');
+
+
+
+
+###Custom Translation Table
+#must be modified for new slot types
+
+my $TranslationTable = Chart::Pie->new (900,900);
+$TranslationTable->set('title' => 'DCsched Slot --> Release Buckets\n'.
+								  'For "notes" the notes field is scanned for hints of an os (4.1,4.0,etc...)\n'.
+								  'For "reserv" the user selects an OS in DCsched to use for their time slot (NO OS is a choice)');
+$TranslationTable->set(%paramHash);
+$TranslationTable->set('legend' => 'left');
+$TranslationTable->set('text_space'=> '10');
+$TranslationTable->set('x_label' => 'Pie Slice ammounts are Meaningless');
+$TranslationTable->set('label_values' => 'none');
+$TranslationTable->set('legend_label_values' => 'none');
+$TranslationTable->set('sub_title' => '');
+%colorHash = (
+	'dataset0'	=> [0,63,135], 	#cray blue
+	'dataset1'	=> [0,63,135], 	#cray blue
+	'dataset2'	=> [0,63,135], 	#cray blue
+	'dataset3'	=> [0,63,135], 	#cray blue
+	'dataset4'	=> [0,63,135], 	#cray blue
+	'dataset5'	=> [0,63,135], 	#cray blue
+	'dataset6'	=> [195,200,200], #gray
+	'dataset7'	=> [195,200,200], #gray
+	'dataset8'	=> [0,173,208], 	#teal
+	'dataset9'	=> [253,200,47], 	#yellow
+	'dataset10'	=> [255,102,0], 	#orange
+	'dataset11'	=> [255,102,0], 	#orange
+	'dataset12'	=> [255,102,0], 	#orange
+	'dataset13'	=> [216,30,5], 	#red
+	'dataset14'	=> [216,30,5], 	#red
+	'dataset15'	=> [105,146,58],	#green
+	'dataset16'	=> [105,146,58],	#green
+	'dataset17'	=> [105,146,58],	#green
+	'dataset18'	=> [95,158,160],	#green
+	'dataset19'	=> [95,158,160],	#green
+	'dataset20'	=> [95,158,160],	#green
+	'dataset21'	=> [95,158,160],	#green
+	'dataset22' => [1,1,1],
+	'dataset23' => [1,1,1]);
+$TranslationTable->set('colors'	 		=> \%colorHash);
+$TranslationTable->add_dataset((
+		'devadmins --> admin'
+		,'ops --> admin'
+		,'upgrade --> admin'
+		,'admin --> admin'
+		,'Admin Time --> admin'
+		,'preempt --> admin'
+		,'CLE-shared --> 2.2'
+		,'CLE-Shared --> 2.2'
+		,'CLE-3.1 --> 3.1'
+		,'CLE-4.0 --> 4.0'
+		,'CLE-4.1 --> 4.1'
+		,'CLE-Dev --> 4.1'
+		,'CLE-4.1 w/LSF --> 4.1'
+		,'lustre-test --> CLE-DEVSP2'
+		,'CLE-DevSP2 --> CLE-DEVSP2'
+		,'vers_res_test --> notes'
+		,'petest --> notes'
+		,'vers --> notes'
+		,'ostest --> reserv'
+		,'ded --> reserv'
+		,'bench-ded --> reserv'
+		,'os-ded --> reserv'
+		,'NO OS --> CLE-other'
+		,'Unparseable Notes --> CLE-other'
+	));	
+$TranslationTable->add_dataset(4,4,3,2,2,3,2,2,3,4,4,3,2,3,2,2,2,4,4,5,3,4,2,3);
+$TranslationTable->png('TranslationTable.png');
+###end custom table
 
 print "Graphs Done!";

@@ -9,6 +9,7 @@ use Chart::Pie;
 use Chart::StackedBars;
 use List::Util 'max';
 use Chart::Mountain;
+use Text::CSV_XS;
 use Switch 'Perl5', 'Perl6';
 
 my $debug = 0; #currently 0,1 or 2
@@ -370,6 +371,7 @@ $chart->set('x_label' => 'Date');
 $chart->set('legend_labels' => \@labels);
 $chart->png(time.'_'.$oh{date}.'-day'.'_mountain.png');
 
+
 ####Usage Pie chart
 
 print "\nCreating " .$extraArgs . " usage information from " . $dateRange ." Chart \n";
@@ -378,13 +380,34 @@ $chart2->set('title' => $extraArgs . ' usage information\n\n' . $machList);
 $chart2->set(%paramHash);
 undef @tempKeys;
 undef @tempVals;
+
+
+
+
+my $csv = Text::CSV_XS->new ({ binary => 1, eol => $/ });
+open my $fh, ">", 'tbl.csv' or die 'tbl.csv: $!';
+
+my $col_names = [ qw( "OS" "Time" ) ];
+$csv->print($fh, ["TITLE"]);
+$csv->print($fh , $col_names);
+
+
+
 foreach $key (sort (keys(%timeHash))) {##so they are in Release Order
 	push (@tempKeys, $key);
 	push (@tempVals, $timeHash{$key});
+	$csv->print ($fh,[$key, $timeHash{$key}]) or $csv->error_diag;
+	
 }
 $chart2->add_dataset( @tempKeys );
 $chart2->add_dataset( @tempVals );
 $chart2->png(time.'_'.$oh{date}.'-day'.'_machine.png');
+
+
+
+
+close $fh or die "$tbl.csv: $!";
+
 
 ####OS Pie chart
 

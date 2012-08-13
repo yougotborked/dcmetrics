@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>dcsched_data</name>
+	<name>dcmetrics</name>
 	<comment></comment>
 	<projects>
+		<project>epic_links</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

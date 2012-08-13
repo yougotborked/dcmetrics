@@ -11,6 +11,7 @@ The Following command line options are supported
 	-a 			| all
 	-d ?  		| past days from today (integer)
 	-g GROUP	| TODO
+	-v			| verbose output (for debuging and such)
 	*			| arguments that can be passed to dcsched see 'dcsched -h' for help
 
 Examples
@@ -42,6 +43,13 @@ A comma seperated value list of *-day_machine.png's data
 TODO
 ------------
 
+1. repurpose pass-through arguments and create groups 
+	-g DEV/gemini  = DEV/gemini machines with gemini buckets
+	-d DEV/cascade = DEV/cascade machines with cascade buckets
+	
+2. make csv for all graphs
+3. change csv filenames to be more verbose
+ 
 
 
 

@@ -241,6 +241,7 @@ while (<DCPIPE>) {
 	 # the data is considered to belong to the start time of the reservation
 	 # this currently only applies to the Mountain Graph, but may also apply to
 	 # different Composition-changing-OverTime graphs.
+	 
 	 # see this website for graph suggestions
 	 # http://extremepresentation.typepad.com/files/choosing-a-good-chart-09.pdf
 

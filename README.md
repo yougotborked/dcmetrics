@@ -43,6 +43,17 @@ A comma seperated value list of *-day_machine.png's data
 TODO
 ------------
 
+1. add unused data over the full 24 hour period, so the graph shows all possible hours over the date range
+
+2. Gemini graph, Aries graph, G + A graph
+
+3. General Size of the machines, CSV of blade counts
+
+4. Drop unknown or undetectable data
+
+Upcoming
+------------
+
 1. repurpose pass-through arguments and create groups 
 	-g DEV/gemini  = DEV/gemini machines with gemini buckets
 	-d DEV/cascade = DEV/cascade machines with cascade buckets

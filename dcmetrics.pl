@@ -15,10 +15,6 @@ use Switch 'Perl5', 'Perl6';
 my $debug = 0; #currently 0,1 or 2
 
 my %oh = ();
-$oh{verbose} = '';
-$oh{all}     = '';
-$oh{date}    = '';
-$oh{group}   = '';
 my $command = ' ';
 
 GetOptions(
@@ -26,6 +22,7 @@ GetOptions(
 	'all'       => \$oh{all},
 	'date=s'    => \$oh{date},
 	'group'	=> \$oh{category},
+	'full' => \$oh{full},
   );
 
 if ( $oh{all} ) {
@@ -38,6 +35,10 @@ if ( $oh{date} ) {
 	$date = $oh{date};
 	print "date set\n";
 	$command .= ' -' . $date . ' -s ' . '-' . $date . ' ';
+}
+
+if ( $oh{full}) {
+	print "full set\n";
 }
 
 my $extraArgs;
@@ -99,6 +100,7 @@ sub CLEversion{
 		case m/admin/			{return $admin}
 		case m/Admin Time/ 		{return $admin}
 		case m/preempt/			{return $admin}
+		case m/cascade_admins/	{return $admin}
 		case m/CLE-shared/ 		{return $p22}
 		case m/CLE-Shared/		{return $p22}
 		case m/CLE-3.1/			{return $p31}
@@ -108,17 +110,28 @@ sub CLEversion{
 		case m/CLE-4.1 w\/LSF/	{return $p41}
 		case m/lustre-test/ 	{return $p51}
 		case m/CLE-DevSP2/ 		{return $p51}
+		case m/vers-hss/		{return $notes}
 		case m/vers_res_test/ 	{return $notes}
 		case m/petest/			{return $notes}
 		case m/vers/ 			{return $notes}
+		case m/ANC\/DPDC/		{return $reserv}
+		case m/shared/			{return $reserv}
+		case m/Diags/			{return $reserv}
 		case m/ostest/ 			{return $reserv}
 		case m/ded/				{return $reserv}
 		case m/bench-ded/  		{return $reserv}
 		case m/os-ded/			{return $reserv}
+		case m/shared-trunk/	{return $reserv}
+		case m/Aries/			{return $reserv}
+
+		case m/Unavail/			{return $skip}
+		case m/unavail/			{return $skip}
+		case m/M.E./			{return $skip} #temporary skip, waiting for wendy to look up and tell me what it is 8/14/12
+		case m/kevin/			{return $skip} #lol
 	}
 	print "WARNING: unhandled DCSCHED category:" . $_ ;
-	print "CLE-Other may now be incorrect\n\n";
-	return $CLEother
+	print "Field Skipped\n\n";
+	return $skip;
 }
 
 sub NotesHandler { #Handles Notes Field
@@ -142,8 +155,8 @@ sub NotesHandler { #Handles Notes Field
 		case m/lustre-test/ 	{return $p51}
 	}
 	print "WARNING: unhandled Notes field:" . $_ ;
-	print "CLE-Other may now be incorrect\n\n";
-	return $CLEother;
+	print "Field Skipped\n\n";
+	return $skip;
 }
 
 sub DedOSversion { #Handles Reservation OS Field
@@ -158,8 +171,8 @@ sub DedOSversion { #Handles Reservation OS Field
 		case m/CLE-5.0/			{return $p50}
 	}
 	print "WARNING: unhandled Reserved OS field:" . $_ ;
-	print "CLE-Other may now be incorrect\n\n";
-	return $CLEother;
+	print "Field Skipped\n\n";
+	return $skip;
 }
 
 sub categoryCombine(@) { #Not actually used, but can be useful in the future....
@@ -190,7 +203,7 @@ while (<DCPIPE>) {
 	if ($debug > 2 ) {print $_;}
 	if ( $_ =~ m/20??\sCDT$/) {
 		$copy = $_ ;
-		$copy =~  s/\s+.*//; 
+		$copy =~  s/\s+.*//;
 		$copy = trim($copy);
 		push(@machineArray,$copy);
 	}
@@ -237,40 +250,47 @@ while (<DCPIPE>) {
 		($ss1,$mm1,$hh1,$day1,$month1,$year1,$zone1) = strptime(time2str($time1));
 		my $dateValue = $month1."-".$day1;
 
-	 # if a reservation goes past midnight into the next day,
-	 # the data is considered to belong to the start time of the reservation
-	 # this currently only applies to the Mountain Graph, but may also apply to
-	 # different Composition-changing-OverTime graphs.
-	 
+	  # if a reservation goes past midnight into the next day,
+	  # the data is considered to belong to the start time of the reservation
+	  # this currently only applies to the Mountain Graph, but may also apply to
+	  # different Composition-changing-OverTime graphs.
+
 	 # see this website for graph suggestions
 	 # http://extremepresentation.typepad.com/files/choosing-a-good-chart-09.pdf
 
 		switch ($category) {
-			case ('skip') {
+			case ($skip) {
 				last;
 			}
 			case ('1') {if ($reservedOS) {
-					$timeHash{$reservedOS} += $timeDiff;
-					$mHash{$reservedOS}{$dateValue} += $timeDiff;
-					for $date (keys %{values %mHash} ) {
-						$mHash{$reservedOS}{$date} += 0;
+					if ($reservedOS ne $skip) {
+						$timeHash{$reservedOS} += $timeDiff;
+						$mHash{$reservedOS}{$dateValue} += $timeDiff;
+						for $date (keys %{values %mHash} ) {
+							$mHash{$reservedOS}{$date} += 0;
+						}
 					}
 				}
 			}
 			case ('2') {if ($notesOS) {
-					$timeHash{$notesOS} += $timeDiff;
-					$mHash{$notesOS}{$dateValue} += $timeDiff;
-					for $date (keys %{values %mHash} ) {
-						$mHash{$notesOS}{$date} += 0;
+					if ($notesOS ne $skip) {
+						$timeHash{$notesOS} += $timeDiff;
+						$mHash{$notesOS}{$dateValue} += $timeDiff;
+						for $date (keys %{values %mHash} ) {
+							$mHash{$notesOS}{$date} += 0;
+						}
 					}
 				}
 			}
-			else {$timeHash{$category} += $timeDiff;
+
+			else {
+				$timeHash{$category} += $timeDiff;
 				$mHash{$category}{$dateValue} += $timeDiff;
 				for $date (keys %{values %mHash} ) {
 					$mHash{$category}{$date} += 0;
 				}
 			}
+
 		}
 
 		for $op (keys %mHash ) {
@@ -287,26 +307,41 @@ while (<DCPIPE>) {
 		$i++;
 	}
 }
-
-while ( ( $key, $value ) = each(%timeHash) ) {
-	print $key. ", " . $value . "\n";
-}
-
 close DCPIPE;
 
+my $tempSum;
+while ( ( $key, $value ) = each(%timeHash) ) {	
+	$tempSum += $value;
+}
+
 my $machList = '';
-$i = 0;
+my $machI;
 foreach $mach (@machineArray) {
-	$i++;
+	$machI++;
 	$machList .= $mach;
 	if (length $machList > 2) {
 		$machList .= ',';
 	}
-	if ($i % 7 == 0) {
-		$machList .= '\n';		
+	if ($machI % 7 == 0) {
+		$machList .= '\n';
 	}
 }
+
 $dateRange = $startTime ." - " . $endTime;
+my $totalTime;
+$start = Date::Parse::str2time($startTime)/60/60;
+$end = Date::Parse::str2time($endTime)/60/60;
+$seH = $end - $start;
+$numMachines = @machineArray;
+$totalTime = $numMachines * $seH;
+
+if ( $oh{full}) {
+ 	$timeHash{unused} = $totalTime-$tempSum;
+}
+
+while ( ( $key, $value ) = each(%timeHash) ) {
+	print $key. ", " . $value . "\n";
+}
 
 ##create your charts here. see http://search.cpan.org/~chartgrp/Chart-2.4.5/Chart.pod for chart::type usage
 #colors
@@ -333,11 +368,9 @@ my $font = 'GD::Font->Giant';
 	'x_label'			=> $dateRange,
 	'colors'	 		=> \%colorHash,
 	'grey_background' 	=> 'false',
-	);
+  );
 
 ###end paramater setting
-
-
 
 ####Mountain Distribution Chart
 
@@ -370,8 +403,8 @@ foreach $key (sort (keys(%mHash))) {
 $chart->set('y_label' => 'total hours ammong machineGroup in one day');
 $chart->set('x_label' => 'Date');
 $chart->set('legend_labels' => \@labels);
+$chart->set('max_val' => $totalTime);
 $chart->png(time.'_'.$oh{date}.'-day'.'_mountain.png');
-
 
 ####Usage Pie chart
 
@@ -382,9 +415,6 @@ $chart2->set(%paramHash);
 undef @tempKeys;
 undef @tempVals;
 
-
-
-
 my $csv = Text::CSV_XS->new ({ binary => 1, eol => $/ });
 open my $fh, ">", 'tbl.csv' or die 'tbl.csv: $!';
 
@@ -392,23 +422,17 @@ my $col_names = [ qw( "OS" "Time" ) ];
 $csv->print($fh, ["TITLE"]);
 $csv->print($fh , $col_names);
 
-
-
 foreach $key (sort (keys(%timeHash))) {##so they are in Release Order
 	push (@tempKeys, $key);
 	push (@tempVals, $timeHash{$key});
 	$csv->print ($fh,[$key, $timeHash{$key}]) or $csv->error_diag;
-	
+
 }
 $chart2->add_dataset( @tempKeys );
 $chart2->add_dataset( @tempVals );
 $chart2->png(time.'_'.$oh{date}.'-day'.'_machine.png');
 
-
-
-
-close $fh or die "$tbl.csv: $!";
-
+close $fh or die "tbl.csv: $!";
 
 ####OS Pie chart
 
@@ -426,16 +450,13 @@ $chart3->add_dataset( @tempKeys );
 $chart3->add_dataset( @tempVals );
 $chart3->png(time.'_'.$oh{date}.'-day'.'_OS.png');
 
-
-
-
 ###Custom Translation Table
 #must be modified for new slot types
 
 my $TranslationTable = Chart::Pie->new (900,900);
 $TranslationTable->set('title' => 'DCsched Slot --> Release Buckets\n'.
-								  'For "notes" the notes field is scanned for hints of an os (4.1,4.0,etc...)\n'.
-								  'For "reserv" the user selects an OS in DCsched to use for their time slot (NO OS is a choice)');
+	  'For "notes" the notes field is scanned for hints of an os (4.1,4.0,etc...)\n'.
+	  'For "reserv" the user selects an OS in DCsched to use for their time slot (NO OS is a choice)');
 $TranslationTable->set(%paramHash);
 $TranslationTable->set('legend' => 'left');
 $TranslationTable->set('text_space'=> '10');
@@ -493,8 +514,8 @@ $TranslationTable->add_dataset((
 		,'bench-ded --> reserv'
 		,'os-ded --> reserv'
 		,'NO OS --> CLE-other'
-		,'Unparseable Notes --> CLE-other'
-	));	
+		,'Unparseable Notes --> Skipped'
+	));
 $TranslationTable->add_dataset(4,4,3,2,2,3,2,2,3,4,4,3,2,3,2,2,2,4,4,5,3,4,2,3);
 $TranslationTable->png('TranslationTable.png');
 ###end custom table

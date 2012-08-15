@@ -9,9 +9,9 @@ Usage
 The Following command line options are supported
 
 	-a 			| all
-	-d ?  		| past days from today (integer)
+	-d #  		| past days from today (integer)
 	-g GROUP	| TODO
-	-v			| verbose output (for debuging and such)
+	--full		| toggles whether or not to include Unused time in Pie charts
 	*			| arguments that can be passed to dcsched see 'dcsched -h' for help
 
 Examples
@@ -43,13 +43,9 @@ A comma seperated value list of *-day_machine.png's data
 TODO
 ------------
 
-1. add unused data over the full 24 hour period, so the graph shows all possible hours over the date range
-
 2. Gemini graph, Aries graph, G + A graph
 
 3. General Size of the machines, CSV of blade counts
-
-4. Drop unknown or undetectable data
 
 Upcoming
 ------------

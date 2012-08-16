@@ -42,7 +42,7 @@ if ( $oh{full}) {
 }
 
 my $extraArgs;
-print "Unprocessed by Getopt::Long\n" if $ARGV[0];
+print "Unprocessed arguments passed to cli dcsched:\n" if $ARGV[0];
 foreach (@ARGV) {
 	print $_."\n";
 	$extraArgs .= ' '.$_;
@@ -92,7 +92,49 @@ my $p51 = 'CLE-DEVSP2';
 my $reserv = '1'; #if required to look at reservation OS
 my $notes = '2'; #if required to look at Notes field
 my $skip = 'skip'; #if you want to disreguard a field
-sub CLEversion{
+sub ariesCLEversion{
+	switch ($_) {
+		case m/devadmins/  		{return $admin}
+		case m/ops/				{return $admin}
+		case m/upgrade/			{return $admin}
+		case m/admin/			{return $admin}
+		case m/Admin Time/ 		{return $admin}
+		case m/preempt/			{return $admin}
+		case m/cascade_admins/	{return $admin}
+		case m/CLE-shared/ 		{return $p22}
+		case m/CLE-Shared/		{return $p22}
+		case m/CLE-3.1/			{return $p31}
+		case m/CLE-4.0/			{return $p40}
+		case m/CLE-4.1/			{return $p41}
+		case m/CLE-Dev/			{return $p51}
+		case m/CLE-4.1 w\/LSF/	{return $p41}
+		case m/lustre-test/ 	{return $p51}
+		case m/CLE-DevSP2/ 		{return $p51}
+		case m/vers-hss/		{return $notes}
+		case m/vers_res_test/ 	{return $notes}
+		case m/petest/			{return $notes}
+		case m/vers/ 			{return $notes}
+		case m/ANC\/DPDC/		{return $reserv}
+		case m/shared/			{return $reserv}
+		case m/Diags/			{return $reserv}
+		case m/ostest/ 			{return $reserv}
+		case m/ded/				{return $reserv}
+		case m/bench-ded/  		{return $reserv}
+		case m/os-ded/			{return $reserv}
+		case m/shared-trunk/	{return $reserv}
+		case m/Aries/			{return $reserv}
+
+		case m/Unavail/			{return $skip}
+		case m/unavail/			{return $skip}
+		case m/M.E./			{return $skip} #temporary skip, waiting for wendy to look up and tell me what it is 8/14/12
+		case m/kevin/			{return $skip} #lol
+	}
+	print "WARNING: unhandled DCSCHED category:" . $_ ;
+	print "Field Skipped\n\n";
+	return $skip;
+}
+
+sub geminiCLEversion{
 	switch ($_) {
 		case m/devadmins/  		{return $admin}
 		case m/ops/				{return $admin}
@@ -134,7 +176,39 @@ sub CLEversion{
 	return $skip;
 }
 
-sub NotesHandler { #Handles Notes Field
+sub CLEversion{
+	#if aries
+	return ariesCLEversion($_);
+	#if gemini
+	return geminiCLEversion($_);
+}
+
+sub ariesNotesHandler { #Handles Notes Field
+	switch ($_) {
+		case m/devadmins/  		{return $admin}
+		case m/ops/				{return $admin}
+		case m/upgrade/			{return $admin}
+		case m/admin/			{return $admin}
+		case m/Admin Time/ 		{return $admin}
+		case m/preempt/			{return $admin}
+		case m/CLE-shared/ 		{return $p22}
+		case m/CLE-3.1/			{return $p31}
+		case m/CLE-4.0/			{return $p40}
+		case m/4.0/				{return $p40}
+		case m/CLE-4.1 w\/LSF/	{return $p41}
+		case m/CLE-4.1/			{return $p41}
+		case m/CLE-Dev/			{return $p51}
+		case m/CLE-DEV/ 		{return $p51}
+		case m/4.1/				{return $p41}
+		case m/CLE-DevSP2/ 		{return $p51}
+		case m/lustre-test/ 	{return $p51}
+	}
+	print "WARNING: unhandled Notes field:" . $_ ;
+	print "Field Skipped\n\n";
+	return $skip;
+}
+
+sub geminiNotesHandler { #Handles Notes Field
 	switch ($_) {
 		case m/devadmins/  		{return $admin}
 		case m/ops/				{return $admin}
@@ -159,7 +233,31 @@ sub NotesHandler { #Handles Notes Field
 	return $skip;
 }
 
-sub DedOSversion { #Handles Reservation OS Field
+sub NotesHandler{
+	#if aries
+	return ariesNotesHandler($_);
+	#if gemini
+	return geminiNotesHandler($_);
+}
+
+
+sub ariesDedOSversion { #Handles Reservation OS Field
+	switch ($_) {
+		case m/CLE-2.2/			{return $p22}
+		case m/CLE-3.1/			{return $p31}
+		case m/CLE-4.0/			{return $p40}
+		case m/CLE-4.1/			{return $p41}
+		case m/CLE-dev/			{return $p51}
+		case m/CLE-devSP2/ 		{return $p51}
+		case m/No OS/			{return $CLEother}
+		case m/CLE-5.0/			{return $p50}
+	}
+	print "WARNING: unhandled Reserved OS field:" . $_ ;
+	print "Field Skipped\n\n";
+	return $skip;
+}
+
+sub geminiDedOSversion { #Handles Reservation OS Field
 	switch ($_) {
 		case m/CLE-2.2/			{return $p22}
 		case m/CLE-3.1/			{return $p31}
@@ -173,6 +271,13 @@ sub DedOSversion { #Handles Reservation OS Field
 	print "WARNING: unhandled Reserved OS field:" . $_ ;
 	print "Field Skipped\n\n";
 	return $skip;
+}
+
+sub DedOSversion{
+	#if aries
+	return ariesDedOSversion($_);
+	#if gemini
+	return geminiDedOSversion($_);
 }
 
 sub categoryCombine(@) { #Not actually used, but can be useful in the future....
@@ -310,7 +415,7 @@ while (<DCPIPE>) {
 close DCPIPE;
 
 my $tempSum;
-while ( ( $key, $value ) = each(%timeHash) ) {	
+while ( ( $key, $value ) = each(%timeHash) ) {
 	$tempSum += $value;
 }
 
@@ -336,7 +441,7 @@ $numMachines = @machineArray;
 $totalTime = $numMachines * $seH;
 
 if ( $oh{full}) {
- 	$timeHash{unused} = $totalTime-$tempSum;
+	$timeHash{unused} = $totalTime-$tempSum;
 }
 
 while ( ( $key, $value ) = each(%timeHash) ) {

@@ -42,10 +42,13 @@ A comma seperated value list of *-day_machine.png's data
 
 TODO
 ------------
+1. implement option to skip weekends in --full (--workweek)
 
-2. Gemini graph, Aries graph, G + A graph
+2. create toggle variable to use new Category parameter to decide which CLEversion, NotesHandler, DedOSversion function to use
 
 3. General Size of the machines, CSV of blade counts
+
+4. update translation table with new DEV/cascade translations.
 
 Upcoming
 ------------

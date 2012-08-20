@@ -2,5 +2,6 @@
 <includepath>
   <includepathentry path="/usr/lib/perl5/vendor_perl/5.10.0" />
   <includepathentry path="/users/abork/usr/local/lib/perl5/site_perl/5.10.0/x86_64-linux-thread-multi" />
+  <includepathentry path="/users/abork/lib/modules" />
 </includepath>
 

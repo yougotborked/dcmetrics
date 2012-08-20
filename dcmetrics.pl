@@ -3,7 +3,7 @@
 use warnings;
 use Getopt::Long;
 use Date::Parse;
-use HTTP::Date;
+use Date::Calc;
 use Time::Local;
 use Chart::Pie;
 use Chart::StackedBars;
@@ -16,6 +16,7 @@ my $debug = 0; #currently 0,1 or 2
 
 my %oh = ();
 my $command = ' ';
+my $superToggle = 'DEV';
 
 GetOptions(
 	'verbose' => \$oh{verbose},
@@ -23,6 +24,7 @@ GetOptions(
 	'date=s'    => \$oh{date},
 	'group'	=> \$oh{category},
 	'full' => \$oh{full},
+	'workweek' => \$oh{workweek},
   );
 
 if ( $oh{all} ) {
@@ -39,6 +41,10 @@ if ( $oh{date} ) {
 
 if ( $oh{full}) {
 	print "full set\n";
+}
+
+if ( $oh{workweek}) {
+	print "workweek set\n";
 }
 
 my $extraArgs;
@@ -74,6 +80,57 @@ sub rtrim($) {
 	my $string = shift;
 	$string =~ s/\s+$//;
 	return $string;
+}
+
+#calculate difference in dates without saturday and sunday
+sub Delta_Business_Days {
+	my(@date1) = (@_)[0,1,2];
+	my(@date2) = (@_)[3,4,5];
+	my($minus,$result,$dow1,$dow2,$diff,$temp);
+
+	$minus  = 0;
+	$result = Date::Calc::Delta_Days(@date1,@date2);
+	if ($result != 0)
+	{
+		if ($result < 0)
+		{
+			$minus = 1;
+			$result = -$result;
+			$dow1 = Date::Calc::Day_of_Week(@date2);
+			$dow2 = Date::Calc::Day_of_Week(@date1);
+		}
+		else
+		{
+			$dow1 = Date::Calc::Day_of_Week(@date1);
+			$dow2 = Date::Calc::Day_of_Week(@date2);
+		}
+		$diff = $dow2 - $dow1;
+		$temp = $result;
+		if ($diff != 0)
+		{
+			if ($diff < 0)
+			{
+				$diff += 7;
+			}
+			$temp -= $diff;
+			$dow1 += $diff;
+			if ($dow1 > 6)
+			{
+				$result--;
+				if ($dow1 > 7)
+				{
+					$result--;
+				}
+			}
+		}
+		if ($temp != 0)
+		{
+			$temp /= 7;
+			$result -= ($temp << 1);
+		}
+	}
+	if ($minus) { return -$result; }
+	else        { return  $result; }
 }
 
 # the following three functions map various parameters to Release Buckets.
@@ -177,10 +234,10 @@ sub geminiCLEversion{
 }
 
 sub CLEversion{
-	#if aries
-	return ariesCLEversion($_);
-	#if gemini
-	return geminiCLEversion($_);
+	switch ($superToggle) {
+		case m/^DEV\/CASCADE$/i	{return ariesCLEversion($_)}
+		case m/^DEV$/i			{return geminiCLEversion($_)}
+	}
 }
 
 sub ariesNotesHandler { #Handles Notes Field
@@ -234,12 +291,11 @@ sub geminiNotesHandler { #Handles Notes Field
 }
 
 sub NotesHandler{
-	#if aries
-	return ariesNotesHandler($_);
-	#if gemini
-	return geminiNotesHandler($_);
+	switch ($superToggle) {
+		case m/^DEV\/CASCADE$/i	{return ariesNotesHandler($_)}
+		case m/^DEV$/i			{return geminiNotesHandler($_)}
+	}
 }
-
 
 sub ariesDedOSversion { #Handles Reservation OS Field
 	switch ($_) {
@@ -274,10 +330,20 @@ sub geminiDedOSversion { #Handles Reservation OS Field
 }
 
 sub DedOSversion{
-	#if aries
-	return ariesDedOSversion($_);
-	#if gemini
-	return geminiDedOSversion($_);
+	switch ($superToggle) {
+		case m/^DEV\/CASCADE$/i	{return ariesDedOSversion($_)}
+		case m/^DEV$/i			{return geminiDedOSversion($_)}
+	}
+}
+
+sub ariesORgemini{
+	switch ($_) {
+		case m/DEV$/i {return 'DEV'}
+		case m/DEV\/CASCADE$/i {return 'DEV/CASCADE'}
+	}
+	print "ERROR: unhandled machine GROUP:" . $_;
+	print "Data set to DEV\n\n";
+	return 'DEV';
 }
 
 sub categoryCombine(@) { #Not actually used, but can be useful in the future....
@@ -287,12 +353,14 @@ sub categoryCombine(@) { #Not actually used, but can be useful in the future....
 	return %hash;
 }
 
+
 #Do the command___
 open( DCPIPE, "/sw/sdev/dcsched/dcsched $command |" );
 $i = 0;
 %timeHash = ();
 %osHash = ();
 %mHash = ();
+%weekendCounter = ();
 my $time1;
 my $time2;
 my $category;
@@ -333,8 +401,8 @@ while (<DCPIPE>) {
 			if ($col[0] =~ m/StartDate/) {$time1 = Date::Parse::str2time($col[1]);
 				if (!(defined $startTime) ) {$startTime = $col[1];}
 			}
-			if ($col[0] =~ m/EndDate/) 		{$time2 = Date::Parse::str2time($col[1]);
-				$endTime = $col[1];}
+			if ($col[0] =~ m/EndDate/) 		{$time2 = Date::Parse::str2time($col[1]);	$endTime = $col[1];}
+			if ($col[0] =~ m/Category/)		{$superToggle = ariesORgemini(trim($col[1]));}
 			if ($col[0] =~ m/SkSlotName/) 	{$category = CLEversion(trim($col[1]));}
 			if ($col[0] =~ m/SkNotes/)		{$notesOS = NotesHandler($col[1]);}
 			if ($col[0] =~ m/UrOsVersion/) 	{$reservedOS = DedOSversion(trim($col[1]));}
@@ -352,8 +420,21 @@ while (<DCPIPE>) {
 			$category = 'admin';
 		}
 
-		($ss1,$mm1,$hh1,$day1,$month1,$year1,$zone1) = strptime(time2str($time1));
+		($year1,$month1,$day1, $hh1,$mm1,$ss1, $doy1,$dow1,$dst1) = Date::Calc::Localtime($time1);
+		($year2,$month2,$day2, $hh2,$mm2,$ss2, $doy2,$dow2,$dst2) = Date::Calc::Localtime($time2);
+
 		my $dateValue = $month1."-".$day1;
+
+		if ($oh{workweek}) {
+			if ($dow1 > 5) {
+				$insert = $year1.$month1.$day1;
+				$weekendCounter{$insert} = 1;
+			}
+			if ($dow2 > 5) {
+				$insert = $year2.$month2.$day2;
+				$weekendCounter{$insert} = 1;
+			}
+		}
 
 	  # if a reservation goes past midnight into the next day,
 	  # the data is considered to belong to the start time of the reservation
@@ -442,6 +523,13 @@ $totalTime = $numMachines * $seH;
 
 if ( $oh{full}) {
 	$timeHash{unused} = $totalTime-$tempSum;
+}
+
+if ( $oh{workweek}) {
+	$weekendDays = keys %weekendCounter;
+	if ($debug) {print "\n\nweekend Days: ".$weekendDays ."\n";}
+	$timeHash{unused} -= $numMachines * 24 *$weekendDays;
+	$dateRange .= " excluding weekends";
 }
 
 while ( ( $key, $value ) = each(%timeHash) ) {
@@ -570,21 +658,21 @@ $TranslationTable->set('label_values' => 'none');
 $TranslationTable->set('legend_label_values' => 'none');
 $TranslationTable->set('sub_title' => '');
 %colorHash = (
-	'dataset0'	=> [0,63,135], 	#cray blue
-	'dataset1'	=> [0,63,135], 	#cray blue
-	'dataset2'	=> [0,63,135], 	#cray blue
-	'dataset3'	=> [0,63,135], 	#cray blue
-	'dataset4'	=> [0,63,135], 	#cray blue
-	'dataset5'	=> [0,63,135], 	#cray blue
-	'dataset6'	=> [195,200,200], #gray
-	'dataset7'	=> [195,200,200], #gray
+	'dataset0'	=> [0,63,135], 		#cray blue
+	'dataset1'	=> [0,63,135], 		#cray blue
+	'dataset2'	=> [0,63,135], 		#cray blue
+	'dataset3'	=> [0,63,135], 		#cray blue
+	'dataset4'	=> [0,63,135], 		#cray blue
+	'dataset5'	=> [0,63,135], 		#cray blue
+	'dataset6'	=> [195,200,200], 	#gray
+	'dataset7'	=> [195,200,200], 	#gray
 	'dataset8'	=> [0,173,208], 	#teal
 	'dataset9'	=> [253,200,47], 	#yellow
 	'dataset10'	=> [255,102,0], 	#orange
 	'dataset11'	=> [255,102,0], 	#orange
 	'dataset12'	=> [255,102,0], 	#orange
-	'dataset13'	=> [216,30,5], 	#red
-	'dataset14'	=> [216,30,5], 	#red
+	'dataset13'	=> [216,30,5], 		#red
+	'dataset14'	=> [216,30,5], 		#red
 	'dataset15'	=> [105,146,58],	#green
 	'dataset16'	=> [105,146,58],	#green
 	'dataset17'	=> [105,146,58],	#green

@@ -46,7 +46,9 @@ A comma seperated value list of *-day_machine.png's data
 Notes and Caveats
 -------
 Because of the custom nature of this script, if new categories are ever added, or different fields need to be supported, they must be added to the script. 
+
 	WARNING: unhandled * : (the unknown data)
+	
 will show up whenever something is detected the script does not know how to process. 
 
 TODO

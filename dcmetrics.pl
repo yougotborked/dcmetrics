@@ -346,7 +346,6 @@ sub ariesORgemini{
 	return 'DEV';
 }
 
-
 #####end BCE section
 
 sub categoryCombine(@) { #Not actually used, but can be useful in the future....
@@ -355,7 +354,6 @@ sub categoryCombine(@) { #Not actually used, but can be useful in the future....
 	delete($hash{$source});
 	return %hash;
 }
-
 
 #Do the command___
 open( DCPIPE, "/sw/sdev/dcsched/dcsched $command |" );
@@ -423,8 +421,8 @@ while (<DCPIPE>) {
 			$category = 'admin';
 		}
 
-		($year1,$month1,$day1, $hh1,$mm1,$ss1, $doy1,$dow1,$dst1) = Date::Calc::Localtime($time1);
-		($year2,$month2,$day2, $hh2,$mm2,$ss2, $doy2,$dow2,$dst2) = Date::Calc::Localtime($time2);
+		my ($year1,$month1,$day1, $hh1,$mm1,$ss1, $doy1,$dow1,$dst1) = Date::Calc::Localtime($time1);
+		my ($year2,$month2,$day2, $hh2,$mm2,$ss2, $doy2,$dow2,$dst2) = Date::Calc::Localtime($time2);
 
 		my $dateValue = $month1."-".$day1;
 

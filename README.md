@@ -69,6 +69,7 @@ Upcoming
 3. change csv filenames to be more verbose
 4. change png filenames to include machine names, or categories
  
+5. Long-Term switch to gnuplot for graphs
 
 
 

@@ -43,12 +43,18 @@ Shows which OS's were reserved by users over the date range. These are NOT relea
 
 A comma seperated value list of *-day_machine.png's data
 
+Notes and Caveats
+-------
+Because of the custom nature of this script, if new categories are ever added, or different fields need to be supported, they must be added to the script. 
+	WARNING: unhandled * : (the unknown data)
+will show up whenever something is detected the script does not know how to process. 
+
 TODO
 ------------
 
 1. General Size of the machines, CSV of blade counts
 
-2. update translation table with new DEV/cascade translations.
+2. update translation table with new DEV/cascade translations. 
 
 Upcoming
 ------------
@@ -59,7 +65,7 @@ Upcoming
 	
 2. make csv for all graphs
 3. change csv filenames to be more verbose
-4. change png filenames to include machine names, or categorys
+4. change png filenames to include machine names, or categories
  
 
 

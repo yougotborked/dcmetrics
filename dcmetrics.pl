@@ -149,6 +149,7 @@ my $p51 = 'CLE-DEVSP2';
 my $reserv = '1'; #if required to look at reservation OS
 my $notes = '2'; #if required to look at Notes field
 my $skip = 'skip'; #if you want to disreguard a field
+
 sub ariesCLEversion{
 	switch ($_) {
 		case m/devadmins/  		{return $admin}

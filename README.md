@@ -60,16 +60,12 @@ TODO
 
 Upcoming
 ------------
-
-1. repurpose pass-through arguments and create groups 
-	-g DEV/gemini  = DEV/gemini machines with gemini buckets
-	-g DEV/cascade = DEV/cascade machines with cascade buckets
 	
-2. make csv for all graphs
-3. change csv filenames to be more verbose
-4. change png filenames to include machine names, or categories
+1. make csv for all graphs
+2. change csv filenames to be more verbose
+3. change png filenames to include machine names, or categories
  
-5. Long-Term switch to gnuplot for graphs
+4. Long-Term: switch to gnuplot for graphs
 
 
 

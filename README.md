@@ -10,7 +10,6 @@ The Following command line options are supported
 
 	-a 					| all
 	-d #  				| past days from today (integer)
-	-g GROUP			| TODO
 	--full				| toggles whether or not to include Unused time in Pie charts
 		|				|
 		-	--workweek	| does not include weekends in unused time calculation
@@ -19,8 +18,8 @@ The Following command line options are supported
 Examples
 
 	$ dcmetrics.pl -d 3 DEV										# This command shows the last 3 days of all machines in the DEV category
-	$ dcmetrics.pl -d 20 mindy pollux-p1 castor-p2 				# This shows the last 20 days of mindy, pollux-p1 and castor-p2's data
-	$ dcmetrics.pl --full --workweek -d 30 DEV DEV/CASCADE 		# This does a full show of the past month of both DEV and DEV/CASCADE not including weekends
+	$ dcmetrics.pl -d 20 mindy pollux-p1 castor-p2 				# This shows the last 20 days of mindy, pollux-p1 and castor-p2's data	
+	$ dcmetrics.pl --full --workweek -d 30 DEV DEV/CASCADE 		# This shows the past 30 days, including unused time (without weekends) for DEV and DEV/CASCADE
 
 Output
 -------

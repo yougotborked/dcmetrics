@@ -133,7 +133,7 @@ sub Delta_Business_Days {
 	else        { return  $result; }
 }
 
-# the following three functions map various parameters to Release Buckets.
+##### the following 6 functions map various parameters to Release Buckets.
 # Blaine Ebling (bce) is the Final Authority on the correctness of this section.
 
 #Currently it is configured for the DEV group in dcsched.
@@ -345,6 +345,9 @@ sub ariesORgemini{
 	print "Data set to DEV\n\n";
 	return 'DEV';
 }
+
+
+#####end BCE section
 
 sub categoryCombine(@) { #Not actually used, but can be useful in the future....
 	my($source, $destination, %hash) = @_;
